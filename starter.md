@@ -61,6 +61,8 @@ Codex already has access to the Harvard Extension course materials for *Reading 
 - course notes;
 - the existing AI-assisted lecture transcription and note-taking pipeline.
 
+See `~/Projects/Courses/26Fall/mathe139`
+
 Use these materials to establish the correct text and the pronunciation conventions used in class.
 
 The professor is Graeme Bird.
@@ -75,9 +77,7 @@ There is no speaker-specific synthesis component in this project.
 
 ### Existing related project
 
-The public repository:
-
-https://github.com/wihl/euclid-vid
+The repository `~/Projects/codex/euclid-vid`
 
 contains a related Ancient Greek speech-processing project.
 
@@ -93,7 +93,7 @@ Do not modify that repository or create unnecessary dependencies on it.
 
 ## 3. Select the Greek passage
 
-Locate the authoritative text of Euclid I.23 from the course materials.
+Locate the authoritative text of Euclid I.23 from the course materials. See `courseworks/projects/2026-projects-i23`
 
 Use the course's official description to establish the proposition's structure and identify the opening one or two sentences.
 
