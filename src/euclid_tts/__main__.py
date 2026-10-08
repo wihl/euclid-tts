@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 from . import audio
-from .pronunciation import erasmian, ipa, modern, pronunciation_record
+from .pronunciation import erasmian, modern, pronunciation_record
 from .prosody import DEFAULT_PAUSES, pause_settings
 from .synthesize import BackendError, Kokoro, google_render, google_voices, kokoro_render, melina_render
 from .text import ROOT, SOURCE, TEST_PHRASE, select
@@ -205,6 +205,12 @@ def qc(out):
             lines += [f"Speech leveling: {meta['leveling']['method']}; 2:1 compression with +6 dB makeup. Frame count unchanged. Original synthesis overloads: {meta['leveling']['synthesis_raw_overload_samples']}. Filter: `{meta['leveling']['filter']}`.", ""]
         if meta.get("render_source", {}).get("pcm_identical_to_approved_prefix"):
             lines += ["Delivered PCM is a lossless first-sentence excerpt of the Modern reading judged accurate by a native Greek speaker, as reported by the user.", ""]
+        if meta.get("human_review"):
+            lines += [f"Human listening verdict: {meta['human_review']['verdict']} ({meta['human_review']['reviewer']}).", ""]
+        if meta.get("render_source", {}).get("wav_identical_to_accepted_sample"):
+            lines += ["Delivered WAV and MP3 are exact copies of the accepted round-5 Neural2-H sample, without resynthesis.", ""]
+        if meta.get("phoneme_substitutions"):
+            lines += [f"Course-to-engine phoneme substitutes: {meta['phoneme_substitutions']}. Target and submitted IPA are recorded separately in JSON.", ""]
         if meta["backend"] == "kokoro":
             lines += ["Pronunciation input: every token was encoded without dropping symbols; stress marks, rough breathings, diphthongs and letter names are in the recorded phoneme strings. This establishes input control. Their realization in the audio and subjective naturalness still need listening.", ""]
         if "voice_gender_verification" in meta:

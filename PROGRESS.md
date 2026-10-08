@@ -1,83 +1,67 @@
-# Active checkpoint — course pronunciation audit, 2026-10-08
+# Final checkpoint — 2026-10-08
 
-The user is going offline. All course files were read without modification.
-The course audit, lexicon corrections and source hashes are saved in
-`src/euclid_tts/pronunciation.py`, `README.md`, and
-`input/pronunciation-source.json`. All 31 tests and the public-path scan pass.
+The bounded Euclid I.23 experiment is complete. The user judged the
+course-corrected round-5 Neural2-H Erasmian reading acceptable and requested
+finalization. The native Greek listener had already approved Modern WaveNet.
 
-- Corrected one-sentence Erasmian WaveNet default generated: 14.35275 seconds.
-- Previous Erasmian default and reports archived in `output/round-5/pre-correction/`.
-- New Neural2-F neutral trial: identical WAV SHA/PCM to the corrected default.
-- New Neural2-F firm trial: distinct, 14.577958 seconds; needs human listening.
-- Latest human feedback: Chirp Leda rejected as worse; Neural2 lively slurred.
-- Modern delivery remains the approved 10.317-second excerpt, untouched.
+## Final presentation audio
 
-Remaining work: finish report regeneration and checks. One further female
-Neural2-H voice check/render is being attempted; if the network drops it can
-be resumed from its saved recipe. No new authentication or course edits needed.
+| Mode | Selected voice | Duration | Human verdict |
+| --- | --- | ---: | --- |
+| Anglophone Erasmian, stress | en-US-Neural2-H | 12.833 s | Acceptable, user |
+| Modern Greek female | el-GR-Wavenet-B | 10.317 s | Accurate, native speaker as reported by user |
 
-Course targets: ευ /juː/, υ /y/, accented ι /iː/, χ /x/. Google en-US
-substitutes /uː/ for /y/ and /k/ for /x/, explicitly recorded in metadata.
-Omicron selects unmerged American off /ɔ/; shared δέ/δή quality remains an
-explicit /ɛ/ choice since the class notes specify equality only.
+Both read the same complete 17-word opening sentence at synthesis rate 0.72
+with three requested 0.65-second phrase pauses. Erasmian retains gentle
+leveling; Modern has no leveling. Masters are mono 24 kHz 16-bit PCM WAV;
+Google Slides copies are 128 kbit/s MP3.
 
-The older checkpoint below is historical and predates the course audit.
+Final files are `output/euclid-I23-erasmian.{wav,mp3,json}` and
+`output/euclid-I23-modern-female.{wav,mp3,json}`. The Erasmian WAV and MP3
+are exact copies of the user-accepted `output/round-5/neural2-h/` sample,
+without resynthesis. The Modern WAV still agrees sample for sample with
+the approved two-sentence recording's prefix. Both have zero source
+overloads and zero decoded clipping. `config.yaml` now selects Neural2-H.
 
----
+## Course audit and remaining limitations
 
-# Saved checkpoint — 2026-10-08
+The course workspace was read without modification. Source hashes and
+relative locators are in `input/pronunciation-source.json`; README's
+pronunciation table cites each divergence. The alphabet is on handout
+pp. 1–2; the diphthong line is on p. 4 in this copy. Timestamped class
+remarks override the handout where they differ.
 
-The experiment, listener feedback and further trials are saved in this repository.
-Source and reports use relative paths; the public-path scan passes.
+The audit corrected 28 word entries and the epsilon label: ευ /juː/,
+standalone υ target /y/, accented ι /iː/, χ target /x/, and explicitly
+selected unmerged American off /ɔ/ for omicron. Google en-US substitutes
+/uː/ for /y/ and /k/ for /x/; target and submitted IPA remain separate in
+metadata. χ is absent from the accepted opening sentence. Silent subscript,
+rough h, delta /d/, ου /uː/, and δέ/δή equality are retained. The shared
+/ɛ/ quality for δέ/δή and αυ /aʊ/ remain explicit unresolved choices.
+Acceptance of the short clip does not certify exact /y x/ or the full text.
 
-## Current presentation clips
+## Listening history and retained alternatives
 
-Defaults now read only the first complete sentence, the 17-word enunciation.
-They retain rate 0.72 and three 0.65-second phrase pauses:
+Chirp Leda was rejected as worse. Neural2-F lively had slurred enunciation.
+After the course correction, neutral Neural2-F returned byte-identical WAV
+and PCM to corrected WaveNet-F. Firm F was distinct but was not selected;
+it has 12 full-scale source PCM samples before leveling, retained in QC.
 
-- Erasmian: en-US-Wavenet-F with explicit IPA and gentle leveling, 14.364 seconds.
-- Modern female: el-GR-Wavenet-B, 10.317 seconds, delivered as an exact PCM
-  excerpt of the recording judged accurate by a native Greek speaker.
+Pre-correction Erasmian delivery/reports are in
+`output/round-5/pre-correction/`. Corrected WaveNet and pre-promotion reports
+are in `output/round-5/corrected-wavenet-reference/`. Round-1, round-2 and
+round-4 comparisons remain intact. All verdicts and measured results are
+recorded in `EXPERIMENTS.md`, `output/naturalness-comparison.md`,
+`output/model-comparison.md`, `output/final-report.md` and `output/qc-report.md`.
+No further voice trial is required for the presentation.
 
-The user confirmed that Erasmian leveling fixed the quiet word-ending drop-off.
-Its remaining issue is a synthesized tone compared with Modern Greek.
-Current audio is in `output/euclid-I23-*.{wav,mp3,json}`. Longer reviewed
-reference files are preserved in `output/round-2/reviewed-defaults/`.
+## Verification and reproduction
 
-## New naturalness comparisons
-
-Two one-sentence alternatives have been rendered with the same IPA targets,
-rate, phrase pauses and leveling:
-
-- en-US-Neural2-F, lively style: 14.655 seconds.
-- en-US-Chirp3-HD-Leda: 16.943 seconds.
-
-They are separate files in `output/round-4/`; the current defaults remain
-user-reviewed references. Both cloud calls succeeded, and their WAV/MP3
-pairs decode without clipping. Neither has a listening verdict yet. Neural2
-is the first audition to try for expressive delivery near the reference
-length. Chirp has longer actual pauses and an active waveform at EOF;
-check its final word for completeness during playback.
-
-Feedback and measured ending gains are recorded in `EXPERIMENTS.md`.
-`output/naturalness-comparison.md` links both new trials and the reference;
-`output/final-report.md` describes the current clips. Historical comparisons
-and five short controls remain under `output/round-2/`.
-
-## Environment and verification
-
-Native ARM64 Python 3.12.11, uv-locked dependencies, FFmpeg and cached Kokoro
-remain available. Twenty-nine tests pass, including unchanged source bytes,
-SSML word coverage, whole-sentence style scope, preserved pauses/frame counts,
-leveling audibility and clipping headroom. All 50 saved WAV/MP3 files in the
-main comparison archive and original backups decode without clipping.
-
-Google ADC, billing and API enablement work; no further setup is needed on
-the original machine. Tested voices were checked against the live inventory.
-No new model download, training or voice cloning was used. Source SHA-256 is
-`4b364cf450c5a905e00c0320b06d1e44510fc2d840adfbe013174c40d061333e`.
-
-## Reproduction
+31 tests pass. All 60 saved WAV/MP3 files decode without clipping. Source
+Greek bytes and the four course-source hashes are unchanged. Accepted audio
+identity, public-path scan and whitespace checks pass. Native ARM64 Python
+3.12.11, uv-locked dependencies, FFmpeg and cached Kokoro remain available.
+Google ADC, billing and the TTS API work; no further setup is needed.
 
 ```bash
 export UV_CACHE_DIR="$PWD/.cache/uv"
@@ -85,14 +69,13 @@ uv sync --python 3.12 --locked
 uv run pytest -q
 uv run python tools/check_public_paths.py
 uv run python -m euclid_tts build
-uv run python -m euclid_tts --config experiments/round-4-erasmian-neural2-lively.yaml build
-uv run python -m euclid_tts --config experiments/round-4-erasmian-chirp-leda.yaml build
 uv run python tools/final_report.py
 ```
 
-Future cloud renders may vary slightly. The delivered Modern excerpt is
-sample-identical to the approved reference; a fresh build uses the same
-voice/input/pacing settings. `tools/round_two.py` regenerates historical
-comparisons then builds current one-sentence defaults. Audio, scratch files,
-credentials, caches and environments remain excluded from Git. No course
-files were modified, and nothing was uploaded to Drive or the shared deck.
+Fresh cloud synthesis uses the accepted recipe but may vary from the saved
+performance. Report refresh uses saved comparisons; it does not call Google.
+Use the saved final files for the presentation. Upload MP3s to Drive and
+insert them in Slides as documented in README; no upload or deck change
+was performed. Credentials, private recordings, audio, scratch files,
+caches and environments remain excluded from Git. Project-owned files use
+relative paths. No training, cloning or new model download was used.

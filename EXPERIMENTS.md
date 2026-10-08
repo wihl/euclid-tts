@@ -175,7 +175,7 @@ Modern Greek remains the approved, sample-identical 10.317-second excerpt.
 | --- | --- | ---: | --- |
 | Neural2-F neutral | Remove lively style | 14.353 s | WAV bytes and PCM identical to corrected WaveNet default; no new audition |
 | Neural2-F firm | Change full-sentence style while keeping voice/input/pacing | 14.578 s | Distinct waveform, human review pending |
-| Neural2-H neutral | Change the verified female stock voice | 12.830 s | Distinct waveform, human review pending |
+| Neural2-H neutral | Change the verified female stock voice | 12.833 s | User judged acceptable; final default |
 
 The neutral duplication is observed for this request; it does not prove the
 services always use the same model. Google accepted all 17 word-phoneme tags
@@ -190,3 +190,34 @@ Human listening must still check actual /juː/ and /iː/, vowel separation in
 γωνίᾳ/γωνίαν, consonant clarity, audible endings and natural connected rhythm.
 The English /uː/ and /k/ substitutes cannot establish exact /y/ and /x/.
 Passing file and SSML checks is not a pronunciation or naturalness verdict.
+
+Final verification: 31 tests pass, course-source hashes are unchanged, the
+Modern PCM still matches the approved prefix exactly, and the public-path
+scan / whitespace check pass. All 58 saved WAV/MP3 files decode without
+clipping before final promotion. The firm trial has **12 full-scale Google source PCM samples**
+before leveling; that source evidence is retained in metadata and QC rather
+than hidden by the output processing. Corrected WaveNet and H have zero
+source overloads. Listen for any harshness in firm delivery as well as clarity.
+
+### Final acceptance and delivery
+
+The user judged **round-5 Neural2-H acceptable** and requested final results
+and writeup. `config.yaml` now selects `en-US-Neural2-H` for Erasmian. The
+accepted WAV and MP3 were copied **byte for byte**, without resynthesis, to
+`output/euclid-I23-erasmian.{wav,mp3}`. JSON records the verdict, sample path,
+audio fingerprint and exact-copy provenance. The corrected 14.353-second
+WaveNet reference and pre-promotion reports are retained in
+`output/round-5/corrected-wavenet-reference/`; older artifacts remain intact.
+
+Final delivery: **12.833-second Erasmian Neural2-H** and **10.317-second
+Modern female WaveNet**, both one sentence, 24 kHz mono 16-bit WAV plus
+128 kbit/s MP3. Both have zero source overloads and zero decoded clipping.
+The Modern WAV remains exactly the approved prefix; it was not regenerated.
+The user's Erasmian verdict is “acceptable,” not a claim of exact /y x/ or
+independent expert validation. The documented engine substitutes and
+unresolved choices remain visible. Firm F was not selected.
+
+README, progress checkpoint and generated comparison/final/QC reports are
+finalized. The bounded presentation experiment is complete; no further
+voice trial is required. Reproduction uses the same configuration, although
+future cloud synthesis can vary from the saved accepted performances.

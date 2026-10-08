@@ -7,6 +7,22 @@ experiment for MATH E-139, taught by Graeme Bird. All code and phonetic
 transcriptions were prepared with AI assistance. No professor's voice is
 cloned, adapted, or used to train a model.
 
+## Final MP3s for the presentation
+
+Insert these two files from this project's local `output/` directory into
+your presentation:
+
+- **Erasmian:** [output/euclid-I23-erasmian.mp3](output/euclid-I23-erasmian.mp3)
+  — the user-accepted Neural2-H reading, **12.83 seconds**.
+- **Modern Greek female:** [output/euclid-I23-modern-female.mp3](output/euclid-I23-modern-female.mp3)
+  — the native-speaker-approved WaveNet reading, **10.32 seconds**.
+
+Both contain only the same complete opening sentence. Their WAV masters
+and JSON metadata are beside them. These generated audio files are saved
+locally and excluded from Git, so the public repository does not include
+the MP3s. Use the saved files for the accepted performances; a fresh cloud
+build can vary. Google Slides insertion steps are at the end of this README.
+
 The first samples failed the user's listening review: both sounded rushed,
 and a native Greek listener found the Modern reading unclear and mixed.
 Feedback is recorded in `EXPERIMENTS.md`; original samples and pre-review
@@ -16,13 +32,15 @@ The user judged the revised readings much better, and a native Greek speaker
 found the default Modern WaveNet reading accurate. The user noted quiet
 Erasmian word endings and requested shorter, one-sentence clips.
 
-Current defaults are **Google `en-US-Wavenet-F` with course-reconciled Erasmian IPA
-and gentle volume leveling** and **`el-GR-Wavenet-B` with
+Final defaults are **Google `en-US-Neural2-H` with course-reconciled Erasmian IPA
+and gentle volume leveling** (12.83 seconds) and **`el-GR-Wavenet-B` with
 Modern normalized text** (10.32 seconds). Both retain synthesis rate 0.72
 and three phrase pauses. The delivered Modern WAV is a lossless excerpt of
 the approved performance. The user confirmed that the earlier Erasmian drop-off was
 gone, but its tone still sounded less natural than the Modern Greek version.
-The course audit corrected the Erasmian targets; that fresh delivery needs review.
+The course audit corrected the Erasmian targets. The user judged round-5
+Neural2-H acceptable; its WAV and MP3 were copied exactly to the default
+filenames, without resynthesis. The accepted Modern excerpt remains unchanged.
 Chirp Leda was rejected as worse, and Neural2 lively was judged slurred.
 The longer reference files are in `output/round-2/reviewed-defaults/`;
 Kokoro, Chirp and a Modern phonetic-spelling trial remain in `output/round-2/`.
@@ -188,28 +206,38 @@ fingerprints are in `output/erasmian-level-check.json`.
 Those ending measurements describe the archived pre-correction waveform,
 not the fresh course-corrected render. The same leveling remains enabled.
 
-## Further Erasmian naturalness trials
+## Final Erasmian selection and naturalness comparisons
 
 The user rejected round-4 Chirp Leda as worse than the preceding version.
 Neural2 lively was somewhat better but had slurred, poorly enunciated words.
 Both used the old lexicon; their files remain as historical failed comparisons.
 
-After regenerating the corrected WaveNet default (14.353 seconds), round 5
-compares Neural2-F with neutral delivery and full-sentence `firm` style,
+After regenerating the corrected WaveNet reference (14.353 seconds), round 5
+compared Neural2-F with neutral delivery and full-sentence `firm` style,
 and a different stock female voice, Neural2-H. All retain the
 corrected phonemes, rate 0.72, three 0.65-second phrase pauses and leveling.
 This tests removing lively delivery, changing style to seek clearer
 enunciation, and changing the neutral voice. Neural2-F neutral returned the
-**exact same WAV bytes and PCM as the corrected default**, so it adds no
+**exact same WAV bytes and PCM as the corrected WaveNet reference**, so it adds no
 audition. Firm F is distinct at **14.578 seconds**; neutral H is distinct at
-**12.830 seconds**. Neither has a human verdict or replaces the default.
+**12.833 seconds**. The user judged **Neural2-H acceptable**, and it is now
+the default. Firm F remains unreviewed and was not selected. The accepted
+files are preserved in `output/round-5/neural2-h/` and copied byte for byte
+to `output/euclid-I23-erasmian.{wav,mp3}`. Corrected WaveNet is archived in
+`output/round-5/corrected-wavenet-reference/`.
+The firm trial's Google source PCM contains 12 full-scale samples before
+leveling; QC retains that evidence. Corrected WaveNet and H have zero source
+overloads. All exported WAV/MP3 files decode without clipping.
 
 ```bash
 uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-firm.yaml build
 uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-h.yaml build
 ```
 
-`output/naturalness-comparison.md` links the alternatives and corrected reference.
+`output/naturalness-comparison.md` records the verdicts and retained comparisons.
+The bounded naturalness experiment is complete; further voice trials are
+not required for this presentation. Cloud reruns may differ from the accepted
+saved performance even with identical settings.
 The [Neural2 expressive-style feature](https://docs.cloud.google.com/text-to-speech/docs/ssml#styles)
 and [Chirp SSML support](https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd)
 are currently preview. Styles are wrapped around a complete sentence; the
@@ -239,7 +267,7 @@ records source hashes, locators and all 29 changed word/letter entries.
 | --- | --- | --- | --- |
 | ευ | /ɛʊ/ | **/juː/**, the vowel/glide sequence in *feud*, including stressed εύ in ἐπεζεύχθω. Google receives /juː/. | H p. 4, diphthong line |
 | Standalone υ (outside a diphthong) | /ʊ/ | **/y/**, high front rounded German ü / French u. Google en-US lacks /y/: selected nearest rounded high-vowel substitute **/uː/** loses frontness, so this is not exact. Kokoro's pinned vocabulary accepts /y/ directly; stock American-voice realization is unverified. | H p. 2, υ |
-| Accented ι, including grave | /ɪ/ throughout | **/iː/** as in *machine*: γωνίᾳ, γωνίαν, ἴσην, ἴση, ἴσαι, τρίγωνον, εἰσὶν, τρισὶ. Unaccented ι remains /ɪ/ as in *bit*; ει follows its separate diphthong rule. | H p. 2, ι; H p. 4, accented vowel marked |
+| Accented ι, including grave | /ɪ/ throughout | **/iː/** as in *machine*: γωνίᾳ, γωνίαν, γωνία, ἴσην, ἴση, ἴσαι, τρίγωνον, εἰσὶν, τρισὶ. Unaccented ι remains /ɪ/ as in *bit*; ει follows its separate diphthong rule. | H p. 2, ι; H p. 4, accented vowel marked |
 | χ | /k/ described as the target | **/x/** as in *loch/Bach* in τυχόντα and ἐπεζεύχθω. Google en-US lacks /x/: selected same-place substitute **/k/** retains velar articulation but loses frication. Its actual input remains /k/ for this explicit engine reason. Kokoro accepts /x/ directly, unverified by ear. χ does not occur in the retained first sentence. | H p. 2, χ |
 | ο versus α | Both /ɑ/, silently merged | Select unmerged American **off /ɔ/** for ο, retaining **father /ɑ/** for α; Google uses /ɔː/ and /ɑː/. The handout does not fix an English dialect, so merged /ɑ/ can also be an American *off*; the chosen distinction is an implementation choice, not an attested Bird vowel. | H p. 1, α; H p. 2, ο |
 | Ε, expanded epsilon label | /ˈɛpsɪlɑn/ | **/ˈɛpsɪlɔn/**; its omicron follows the selected *off* vowel. Α/Β/Γ/Δ/Ζ/Η were checked and remain unchanged: α=father, η=late, ζ=zoo, stop β/γ/δ. | H pp. 1–2; ο p. 2 |
@@ -339,7 +367,12 @@ and [authentication documentation](https://cloud.google.com/text-to-speech/docs/
 7. Google's [current pricing](https://cloud.google.com/text-to-speech/pricing)
    lists Chirp 3 HD at $30 per million characters beyond a 1-million-character
    monthly allowance. WaveNet/Standard is $4 per million beyond a
-   4-million-character allowance. SSML tags count toward billable characters;
+   4-million-character allowance. **Neural2**, used for the final Erasmian
+   voice, is **$16 per million** beyond a 1-million-character allowance.
+   The accepted Erasmian request contains 1,008 characters, about **$0.016**
+   outside that allowance; the saved Modern request contains 192 characters,
+   about **$0.00077**. Rates were checked on 2026-10-08.
+   SSML tags count toward billable characters;
    output JSON records request character counts and byte sizes. Short WaveNet
    requests cost fractions of a cent at list price; the bounded comparison
    costs cents outside allowances. This is an estimate, not a billing receipt.
@@ -446,8 +479,9 @@ This scans project-owned text, including ignored reports, for personal absolute
 home paths. Dependencies, caches, Git internals and binary artifacts are excluded.
 
 No automated check proves subjective naturalness, historical accuracy or
-complete word coverage. A human listening pass is required before presenting
-the experimental Erasmian output. Compare ει/η with Modern /i/, ευ with
+complete word coverage. The user accepted the corrected Neural2-H reading;
+that overall verdict does not establish exact /y x/ or settle unresolved
+classroom choices. For future pronunciation review, compare ει/η with Modern /i/, ευ with
 Modern /ef~ev/, /h/ in ἡ and ὑπό, /b/ in beta versus Modern /v/, and /d ɡ/
 in delta/gamma versus Modern /ð ɣ/. Confirm the final συστήσασθαι is audible
 and no word or label repeats. English-trained Kokoro may reduce vowels,
@@ -458,14 +492,16 @@ The first review identified pacing and mixed pronunciation as problems.
 The later native-speaker review judged the default Modern WaveNet reading
 accurate; that supersedes the earlier negative report for this voice/input.
 The user found the Erasmian improved but noted quiet endings, addressed by
-the new leveling. Current clips use one sentence. Ancient wording remains
-unchanged, and other Modern variants have no reported review. Further
-individual classroom conventions need documented examples. No training or
-broad phonology engine is involved.
+leveling. After the course audit and further voice comparisons, the user
+accepted Neural2-H. Final clips use one sentence. Ancient wording remains
+unchanged, and other Modern variants have no reported review. αυ and the
+exact shared δέ/δή quality remain explicitly unresolved; χ is absent from
+the accepted short clip. No training or broad phonology engine is involved.
 
 ## Put the MP3s in Google Slides
 
-Upload the two `.mp3` files to Google Drive. Open the desired slide, choose
+Upload `output/euclid-I23-erasmian.mp3` and
+`output/euclid-I23-modern-female.mp3` to Google Drive. Open the desired slide, choose
 **Insert → Audio**, and select the appropriate Drive file. In **Format
 options → Audio playback**, choose click-to-play or automatic playback.
 Ensure the people viewing the deck can access the audio files. Google
