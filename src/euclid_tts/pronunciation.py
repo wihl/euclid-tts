@@ -1,6 +1,7 @@
 """A manually reviewed I.23 lexicon, not a general Ancient Greek G2P."""
 import re
 import unicodedata as ud
+from xml.sax.saxutils import escape, quoteattr
 
 from .text import LETTERS, WORD
 
@@ -35,6 +36,18 @@ ERASMIAN_LETTERS = {
     "Ε": "ˈɛpsɪlɑn", "Ζ": "ˈzItɑ", "Η": "ˈItɑ",
 }
 MODERN_LETTERS = {"Α": "άλφα", "Β": "βήτα", "Γ": "γάμμα", "Δ": "δέλτα", "Ε": "έψιλον", "Ζ": "ζήτα", "Η": "ήτα"}
+MODERN_MONOSYLLABLES = {"πρός", "τή", "καί", "τώ", "μέν", "τό", "δέ", "δή", "δεί", "τών", "τά", "έκ", "αί", "ταίς", "τήν", "ούν"}
+
+# Diagnostic phonetic spellings, not a translation or spelling correction.
+# Keep the same inflections, stress and word order; make /i/ and /ef, af/
+# explicit for unfamiliar Ancient forms. Used only with input: respelled.
+MODERN_RESPELLINGS = {
+    "δοθείση": "δοθίσι", "δοθείσα": "δοθίσα", "ευθεία": "εφθία",
+    "αυτή": "αφτή", "σημείω": "σιμίο", "σημείον": "σιμίον",
+    "ευθυγράμμω": "εφθιγράμμο", "ευθύγραμμον": "εφθίγραμμον",
+    "ευθύγραμμος": "εφθίγραμμος", "ίσην": "ίσιν",
+    "συστήσασθαι": "σιστίσασθε",
+}
 
 
 def erasmian(text: str) -> str:
@@ -59,7 +72,7 @@ def ipa(phonemes: str) -> str:
     return phonemes
 
 
-def modern(text: str) -> str:
+def modern(text: str, respelled: bool = False) -> str:
     def letters(match: re.Match) -> str:
         try:
             return " ".join(MODERN_LETTERS[c] for c in match.group())
@@ -74,4 +87,37 @@ def modern(text: str) -> str:
             output.append(c)  # discard breathings and iota subscript
     # In Greek, ';' is a question mark. Use a comma for the source's raised
     # dot so a Modern Greek voice gets a pause without interrogative prosody.
-    return ud.normalize("NFC", "".join(output)).replace("·", ",").replace("·", ",").replace("᾿", "’")
+    normalized = ud.normalize("NFC", "".join(output)).replace("·", ",").replace("·", ",").replace("᾿", "’")
+    def accent_and_spelling(match):
+        token = match.group()
+        if token.lower() in MODERN_MONOSYLLABLES:
+            token = ud.normalize("NFC", "".join(c for c in ud.normalize("NFD", token) if c != "\u0301"))
+        if respelled and token.lower() in MODERN_RESPELLINGS:
+            replacement = MODERN_RESPELLINGS[token.lower()]
+            token = replacement.capitalize() if token[0].isupper() else replacement
+        return token
+    return re.sub(WORD, accent_and_spelling, normalized)
+
+
+def erasmian_ssml_words(text: str) -> str:
+    """One IPA tag per word; labels expand into one tag per letter name.
+
+    Google English uses /ɑː/ in its documented alphabet where Kokoro uses
+    /ɑ/. This is an engine encoding adaptation;
+    /ɑː/ does not claim Greek vowel quantity.
+    """
+    def tag(label, phonemes):
+        phonemes = ipa(phonemes).replace("ɑ", "ɑː")
+        return f'<phoneme alphabet="ipa" ph={quoteattr(phonemes)}>{escape(label)}</phoneme>'
+    def word(match):
+        token = match.group()
+        if re.fullmatch(r"[Α-Ω]+", token):
+            return " ".join(tag(c, erasmian(c)) for c in token)
+        return tag(token, erasmian(token))
+    # Escape non-word text too, without escaping the tags inserted afterward.
+    parts, position = [], 0
+    for match in re.finditer(WORD, text):
+        parts.extend([escape(text[position:match.start()]), word(match)])
+        position = match.end()
+    parts.append(escape(text[position:]))
+    return "".join(parts).replace("·", ";").replace("·", ";")

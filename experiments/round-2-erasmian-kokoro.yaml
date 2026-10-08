@@ -12,15 +12,15 @@ speech:
 voices:
   erasmian:
     enabled: true
-    backend: google_cloud
-    voice: en-US-Wavenet-F
+    backend: kokoro
+    voice: af_heart
   modern_female:
-    enabled: true
+    enabled: false
     backend: google_cloud
     voice: el-GR-Wavenet-B
     input: normalized
 output:
-  directory: output
+  directory: ../output/round-2/erasmian-kokoro
   formats:
   - wav
   - mp3

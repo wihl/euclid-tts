@@ -12,6 +12,7 @@ import yaml
 
 from . import audio
 from .pronunciation import erasmian, ipa, modern
+from .prosody import DEFAULT_PAUSES, pause_settings
 from .synthesize import BackendError, Kokoro, google_render, google_voices, kokoro_render, melina_render
 from .text import ROOT, SOURCE, TEST_PHRASE, select
 
@@ -35,19 +36,28 @@ def validate(cfg: dict) -> dict:
     rate = cfg["speech"].get("rate")
     if type(rate) not in {int, float} or not 0.7 <= rate <= 1.3:
         raise ValueError("speech.rate must be a number from 0.7 to 1.3")
+    pauses = cfg["speech"].get("pauses", {})
+    if not isinstance(pauses, dict) or set(pauses)-set(DEFAULT_PAUSES):
+        raise ValueError("speech.pauses must contain phrase/comma/section/sentence durations")
+    if any(type(value) not in {int, float} or not 0.15 <= value <= 2.0 for value in pauses.values()):
+        raise ValueError("Pause durations must be numbers from 0.15 to 2.0 seconds")
     voices = cfg["voices"]
     if set(voices) != set(VOICE_NAMES):
         raise ValueError("voices must contain erasmian and modern_female")
     for name, v in voices.items():
         if not isinstance(v, dict) or type(v.get("enabled")) is not bool:
             raise ValueError(f"{name}.enabled must be true or false")
-        choices = {"auto", "kokoro"} if name == "erasmian" else {"auto", "google_cloud", "macos"}
+        choices = {"auto", "kokoro", "google_cloud"} if name == "erasmian" else {"auto", "google_cloud", "macos"}
         if v.get("backend") not in choices:
             raise ValueError(f"Invalid backend for {name}")
         if not isinstance(v.get("voice"), str) or not v["voice"]:
             raise ValueError(f"Missing voice for {name}")
-        if name == "erasmian" and v["voice"] not in {"af_heart", "af_bella"}:
+        if name == "erasmian" and v["backend"] != "google_cloud" and v["voice"] not in {"af_heart", "af_bella"}:
             raise ValueError("Use a reviewed Kokoro voice: af_heart or af_bella")
+        if name == "erasmian" and v["backend"] == "google_cloud" and not v["voice"].startswith("en-US-"):
+            raise ValueError("Google Erasmian requires an en-US voice with IPA controls")
+        if name == "modern_female" and v.get("input", "normalized") not in {"normalized", "respelled"}:
+            raise ValueError("modern_female.input must be normalized or respelled")
     formats = cfg["output"].get("formats")
     if not isinstance(formats, list) or not formats or len(set(formats)) != len(formats) or set(formats)-{"wav", "mp3"}:
         raise ValueError("output.formats must contain wav and/or mp3 without duplicates")
@@ -61,10 +71,10 @@ def save_json(path: Path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
 
 
-def render_modern(text, v, rate, scratch):
+def render_modern(text, v, rate, scratch, pauses=None):
     if v["backend"] in {"auto", "google_cloud"}:
         try:
-            return google_render(text, v["voice"], rate)
+            return google_render(text, v["voice"], rate, pauses=pauses, respelled=v.get("input") == "respelled")
         except BackendError as exc:
             if v["backend"] == "google_cloud":
                 raise
@@ -81,30 +91,35 @@ def build(cfg, out, voice=None, sentence_count=None):
     if sentence_count is not None:
         passage_cfg.update(selection="first_sentences", sentence_count=sentence_count)
     selected = select(source_bytes.decode("utf-8"), passage_cfg["selection"], passage_cfg["sentence_count"])
+    pauses = pause_settings(cfg["speech"])
     out.mkdir(parents=True, exist_ok=True)
     for name, v in cfg["voices"].items():
         if (voice and name != voice) or not v["enabled"]:
             continue
         start = time.perf_counter()
-        if name == "erasmian":
+        if name == "erasmian" and v["backend"] == "google_cloud":
+            data, meta = google_render(selected, v["voice"], cfg["speech"]["rate"], mode="erasmian", pauses=pauses)
+            meta["ipa"] = ipa(erasmian(selected))
+        elif name == "erasmian":
             load_start = time.perf_counter()
             model = Kokoro(v["voice"])
             load_seconds = time.perf_counter()-load_start
             inference_start = time.perf_counter()
-            data, meta = kokoro_render(model, selected, cfg["speech"]["rate"])
+            data, meta = kokoro_render(model, selected, cfg["speech"]["rate"], pauses)
             meta["load_seconds"] = load_seconds
             meta["inference_seconds"] = time.perf_counter()-inference_start
             meta["ipa"] = ipa(erasmian(selected))
         else:
-            data, meta = render_modern(selected, v, cfg["speech"]["rate"], ROOT/"work/modern-raw.wav")
+            data, meta = render_modern(selected, v, cfg["speech"]["rate"], ROOT/"work/modern-raw.wav", pauses)
         wav = out / f"{VOICE_NAMES[name]}.wav"
         meta.update(audio.write_wav(wav, data))
         files = [wav]
         if "mp3" in cfg["output"]["formats"]:
             files.append(audio.export_mp3(wav))
-        meta.update(source_sha256=hashlib.sha256(source_bytes).hexdigest(), selected_greek=selected, selection=passage_cfg, rate=cfg["speech"]["rate"], elapsed_seconds=time.perf_counter()-start, process_max_rss_mib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**2), architecture=platform.machine(), audio=[audio.inspect(p) for p in files])
+        meta.update(source_sha256=hashlib.sha256(source_bytes).hexdigest(), selected_greek=selected, selection=passage_cfg, rate=cfg["speech"]["rate"], pauses=pauses, elapsed_seconds=time.perf_counter()-start, process_max_rss_mib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**2), architecture=platform.machine(), audio=[audio.inspect(p) for p in files])
         save_json(out/f"{VOICE_NAMES[name]}.json", meta)
-        print(f"{name}: {meta['audio'][0]['duration_seconds']:.2f}s speech → {wav}")
+        label = str(wav.relative_to(ROOT)) if wav.is_relative_to(ROOT) else wav.name
+        print(f"{name}: {meta['audio'][0]['duration_seconds']:.2f}s speech → {label}", flush=True)
     qc(out)
 
 
@@ -119,7 +134,7 @@ def bakeoff(cfg, out):
             model = Kokoro(voice)
             candidate["load_seconds"] = time.perf_counter()-start
             start = time.perf_counter()
-            data, meta = kokoro_render(model, TEST_PHRASE, cfg["speech"]["rate"])
+            data, meta = kokoro_render(model, TEST_PHRASE, cfg["speech"]["rate"], pause_settings(cfg["speech"]))
             candidate.update(meta)
             candidate["inference_seconds"] = time.perf_counter()-start
             wav = folder/f"{voice}.wav"
@@ -139,7 +154,7 @@ def bakeoff(cfg, out):
         try:
             start = time.perf_counter()
             v = dict(cfg["voices"]["modern_female"], backend=backend)
-            data, meta = render_modern(TEST_PHRASE, v, cfg["speech"]["rate"], ROOT/"work/melina-test.wav")
+            data, meta = render_modern(TEST_PHRASE, v, cfg["speech"]["rate"], ROOT/"work/melina-test.wav", pause_settings(cfg["speech"]))
             candidate.update(meta, inference_seconds=time.perf_counter()-start)
             wav = folder/f"{backend}.wav"
             candidate.update(audio.write_wav(wav, data))
@@ -150,14 +165,14 @@ def bakeoff(cfg, out):
         candidate["max_process_rss_mib"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**2)
         records.append(candidate)
         print(f"{backend}: {candidate['status']}", flush=True)
-    save_json(out/"model-comparison.json", {"phrase": TEST_PHRASE, "rate": cfg["speech"]["rate"], "candidates": records})
+    save_json(folder/"model-comparison.json", {"phrase": TEST_PHRASE, "rate": cfg["speech"]["rate"], "candidates": records})
     lines = ["# Short-phrase comparison", "", f"Greek: {TEST_PHRASE}", "", f"Erasmian IPA-like input: `{erasmian(TEST_PHRASE)}`", "", f"Modern input: {modern(TEST_PHRASE)}", "", "| Candidate | Mode | Status | Duration | Inference |", "| --- | --- | --- | ---: | ---: |"]
     for c in records:
         duration = f"{c['audio']['duration_seconds']:.2f}s" if 'audio' in c else "—"
         inference = f"{c['inference_seconds']:.2f}s" if 'inference_seconds' in c else "—"
         lines.append(f"| {c['candidate']} | {c['mode']} | {c['status']} | {duration} | {inference} |")
     lines += ["", "Measured timings and input tokens are in model-comparison.json. Inference excludes local model loading. Memory is a process high-water mark, not isolated per candidate. Local calls have no API charge; Google cost depends on the account's monthly allowance.", "", "Kokoro accepts every phoneme token without filtering; its English voice is being tested outside its training language. Generated audio is experimental. Naturalness and complete word coverage require listening. Automated integrity checks do not establish pronunciation accuracy.", "", "Known compromises: English rhotic /ɹ/, non-native /ɛʊ/ for ευ, and unstressed English vowel reduction. No professor's voice is used."]
-    (out/"model-comparison.md").write_text("\n".join(lines)+"\n", encoding="utf-8")
+    (folder/"model-comparison.md").write_text("\n".join(lines)+"\n", encoding="utf-8")
 
 
 def qc(out):

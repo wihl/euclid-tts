@@ -1,0 +1,26 @@
+passage:
+  proposition: I.23
+  selection: first_sentences
+  sentence_count: 1
+speech:
+  rate: 0.82
+  pauses:
+    phrase: 0.45
+    comma: 0.65
+    section: 0.9
+    sentence: 1.1
+voices:
+  erasmian:
+    enabled: false
+    backend: kokoro
+    voice: af_heart
+  modern_female:
+    enabled: true
+    backend: google_cloud
+    voice: el-GR-Chirp3-HD-Aoede
+    input: normalized
+output:
+  directory: ../../output/round-2/short/modern-chirp
+  formats:
+  - wav
+  - mp3

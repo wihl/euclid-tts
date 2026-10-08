@@ -1,4 +1,8 @@
 import hashlib
+import importlib.util
+import json
+import re
+from xml.etree import ElementTree as ET
 
 import numpy as np
 import pytest
@@ -6,8 +10,10 @@ import yaml
 
 from euclid_tts import audio
 from euclid_tts.__main__ import VOICE_NAMES, validate
-from euclid_tts.pronunciation import erasmian, modern
-from euclid_tts.text import ROOT, SOURCE, select, sentences
+from euclid_tts.pronunciation import erasmian, erasmian_ssml_words, modern
+from euclid_tts.prosody import DEFAULT_PAUSES, phrase_plan
+from euclid_tts.synthesize import google_ssml_batches, kokoro_render
+from euclid_tts.text import ROOT, SOURCE, WORD, select, sentences
 
 
 def config():
@@ -53,10 +59,13 @@ def test_erasmian_contrasts_and_letter_names():
 
 
 def test_modern_normalization_and_geometry():
-    assert modern("Ἔστω τῇ δοθείσῃ εὐθείᾳ") == "Έστω τή δοθείση ευθεία"
+    assert modern("Ἔστω τῇ δοθείσῃ εὐθείᾳ") == "Έστω τη δοθείση ευθεία"
     assert modern("ἡ ὑπὸ ΑΒ ΔΓΕ") == "η υπό άλφα βήτα δέλτα γάμμα έψιλον"
     assert modern("ῥ ἁ ἀ ῳ ϊ ΐ") == "ρ α α ω ϊ ΐ"
-    assert modern("ΔΓΕ· δεῖ δὴ") == "δέλτα γάμμα έψιλον, δεί δή"
+    assert modern("ΔΓΕ· δεῖ δὴ") == "δέλτα γάμμα έψιλον, δει δη"
+    assert modern("πρὸς τῇ καὶ τῷ τὸ δὲ") == "προς τη και τω το δε"
+    assert modern("ὑπὸ αὐτῇ γωνίᾳ") == "υπό αυτή γωνία"
+    assert modern("δοθείσῃ εὐθείᾳ συστήσασθαι", respelled=True) == "δοθίσι εφθία σιστίσασθε"
 
 
 @pytest.mark.parametrize("section,key,value", [
@@ -64,6 +73,8 @@ def test_modern_normalization_and_geometry():
     ("passage", "sentence_count", False), ("passage", "sentence_count", 6),
     ("passage", "selection", "characters"), ("passage", "proposition", "I.22"),
     ("output", "formats", ["flac"]), ("output", "formats", ["wav", "wav"]),
+    ("speech", "pauses", {"sentence": True}), ("speech", "pauses", {"phrase": -1}),
+    ("speech", "pauses", {"word": 0.5}),
 ])
 def test_invalid_config(section, key, value):
     cfg = config()
@@ -105,3 +116,78 @@ def test_overloads_and_bad_audio_are_not_hidden(tmp_path):
     for data in [np.zeros(240), np.array([np.nan]), np.array([])]:
         with pytest.raises(ValueError):
             audio.write_wav(tmp_path/"bad.wav", data)
+
+
+def test_phrase_planning_keeps_complete_source_and_geometry_groups():
+    for count in [1, 2, 5]:
+        selected = select(SOURCE.read_text(), sentence_count=count)
+        plan = phrase_plan(selected)
+        fold = lambda s: re.sub(r"\s+", " ", s).strip()
+        assert fold(" ".join(p["greek"] for p in plan)) == fold(selected)
+        assert plan[-1]["pause_after_seconds"] == 0
+    opening = phrase_plan(select(SOURCE.read_text(), sentence_count=2))
+    assert len(opening) == 11
+    assert [p["greek"] for p in opening if "ΔΓΕ" in p["greek"]] == [
+        "ἡ δὲ δοθεῖσα γωνία εὐθύγραμμος ἡ ὑπὸ ΔΓΕ·",
+        "τῇ δοθείσῃ γωνίᾳ εὐθυγράμμῳ τῇ ὑπὸ ΔΓΕ",
+    ]
+    assert sum(p["pause_after_seconds"] for p in opening) == pytest.approx(6.0)
+
+
+def test_google_ssml_covers_every_word_and_expanded_letter_once():
+    selected = select(SOURCE.read_text(), sentence_count=2)
+    expected = []
+    for word in re.findall(WORD, selected):
+        expected.extend(list(word) if re.fullmatch(r"[Α-Ω]+", word) else [word])
+    batches = google_ssml_batches(phrase_plan(selected), "erasmian")
+    actual = []
+    for batch in batches:
+        root = ET.fromstring(batch["ssml"])
+        actual.extend(node.text for node in root.iter("phoneme"))
+        assert len(batch["ssml"].encode("utf-8")) <= 5000
+    assert actual == expected
+    root = ET.fromstring("<speak>"+erasmian_ssml_words("ἡ ΑΒ & ὑπὸ")+"</speak>")
+    assert [p.attrib["ph"] for p in root.iter("phoneme")] == ["heɪ", "ˈɑːlfɑː", "ˈbeɪtɑː", "hʊˈpɑː"]
+    assert "&amp;" in ET.tostring(root, encoding="unicode")
+    # Full selection also stays within the real service byte limit.
+    for mode in ["erasmian", "modern_female"]:
+        for batch in google_ssml_batches(phrase_plan(SOURCE.read_text().strip()), mode):
+            ET.fromstring(batch["ssml"])
+            assert len(batch["ssml"].encode("utf-8")) <= 5000
+
+
+def test_pause_settings_change_actual_pcm_without_dropping_words():
+    class FakeModel:
+        voice = "test"
+        artifacts = {}
+        def __init__(self):
+            self.words = []
+        def synthesize(self, text, rate):
+            self.words.append(text)
+            return np.ones(2400, dtype=np.float32)*0.1, {}
+    model = FakeModel()
+    selected = select(SOURCE.read_text(), sentence_count=1)
+    samples, _ = kokoro_render(model, selected, 0.82, {**DEFAULT_PAUSES, "phrase": 0.6})
+    assert " ".join(model.words) == selected
+    assert len(samples) == 4*2400 + 3*round(0.6*audio.SAMPLE_RATE)
+    assert len(np.flatnonzero(samples)) == 4*2400
+
+
+def test_source_provenance_is_portable():
+    source = json.loads((ROOT/"input/source.json").read_text())
+    assert source["course_pdf"] == "materials/books/Elements.pdf"
+    assert source["course_transcription"].startswith("coursework/")
+
+
+def test_public_path_scan_catches_metadata_and_home_root(tmp_path):
+    spec = importlib.util.spec_from_file_location("public_paths", ROOT/"tools/check_public_paths.py")
+    scanner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(scanner)
+    # Construct test home paths without placing an absolute home in repo text.
+    home = "/".join(["", "Users", "example"])
+    (tmp_path/"source.json").write_text(json.dumps({"source": home+"/course/text.txt"}))
+    (tmp_path/"checkpoint.md").write_text(home)
+    (tmp_path/"portable.json").write_text(json.dumps({"source": "materials/books/Elements.pdf"}))
+    (tmp_path/".venv").mkdir()
+    (tmp_path/".venv/installed.txt").write_text(home+"/python")
+    assert set(scanner.personal_paths(tmp_path)) == {"source.json", "checkpoint.md"}

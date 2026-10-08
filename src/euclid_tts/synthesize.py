@@ -7,12 +7,14 @@ import os
 import subprocess
 import wave
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import numpy as np
 
 from . import audio
-from .pronunciation import erasmian, modern
-from .text import ROOT, chunks, sentences
+from .pronunciation import erasmian, erasmian_ssml_words, modern
+from .prosody import phrase_plan
+from .text import ROOT
 
 MODEL_REPO = "onnx-community/Kokoro-82M-v1.0-ONNX"
 MODEL_REVISION = "1939ad2a8e416c0acfeecc08a694d14ef25f2231"
@@ -31,9 +33,9 @@ def google_session():
     return AuthorizedSession(credentials)
 
 
-def google_voices() -> list[dict]:
+def google_voices(language_code: str = "el-GR") -> list[dict]:
     try:
-        response = google_session().get("https://texttospeech.googleapis.com/v1/voices", params={"languageCode": "el-GR"}, timeout=30)
+        response = google_session().get("https://texttospeech.googleapis.com/v1/voices", params={"languageCode": language_code}, timeout=30)
     except Exception as exc:
         # Exception strings can contain credential paths or token responses.
         raise BackendError(f"Google authentication/network failed ({type(exc).__name__}); see README Google Cloud TTS Setup") from None
@@ -87,37 +89,75 @@ class Kokoro:
         return np.asarray(wave_data).reshape(-1), {"greek": text, "phonemes": phonemes, "phoneme_count": len(ids), "all_tokens_encoded": True}
 
 
-def kokoro_render(model: Kokoro, text: str, rate: float) -> tuple[np.ndarray, dict]:
+def kokoro_render(model: Kokoro, text: str, rate: float, pauses: dict | None = None) -> tuple[np.ndarray, dict]:
     clips, records = [], []
-    for sentence in sentences(text):
-        units = [sentence] if len(erasmian(sentence)) <= 510 else chunks(sentence)
-        for unit in units:
-            clip, record = model.synthesize(unit, rate)
-            clips.append(audio.trim_edges(clip, audio.SAMPLE_RATE))
-            records.append(record)
-            pause = 0.4 if unit.endswith(".") else 0.22
-            clips.append(np.zeros(int(audio.SAMPLE_RATE * pause), dtype=np.float32))
-    return np.concatenate(clips[:-1]), {"backend": "kokoro", "voice": model.voice, "model": MODEL_REPO, "chunks": records, **model.artifacts}
+    plan = phrase_plan(text, pauses)
+    for group in plan:
+        clip, record = model.synthesize(group["greek"], rate)
+        clips.append(audio.trim_edges(clip, audio.SAMPLE_RATE))
+        records.append({**record, **group})
+        if group["pause_after_seconds"]:
+            clips.append(np.zeros(round(audio.SAMPLE_RATE * group["pause_after_seconds"]), dtype=np.float32))
+    return np.concatenate(clips), {"backend": "kokoro", "voice": model.voice, "model": MODEL_REPO, "chunks": records, "phrase_plan": plan, **model.artifacts}
 
 
-def google_render(text: str, voice: str, rate: float, voices: list[dict] | None = None) -> tuple[np.ndarray, dict]:
-    voices = google_voices() if voices is None else voices
+def google_ssml_batches(plan: list[dict], mode: str, respelled: bool = False) -> list[dict]:
+    batches, groups = [], []
+    def finish():
+        pieces = []
+        for i, group in enumerate(groups):
+            greek = group["greek"]
+            pieces.append(erasmian_ssml_words(greek) if mode == "erasmian" else escape(modern(greek, respelled)))
+            if i < len(groups)-1:
+                pieces.append(f'<break time="{round(1000*group["pause_after_seconds"])}ms"/>')
+        ssml = "<speak>" + " ".join(pieces) + "</speak>"
+        if len(ssml.encode("utf-8")) > 5000:
+            raise ValueError("SSML request exceeds Google's 5,000-byte limit")
+        batches.append({"ssml": ssml, "greek": " ".join(g["greek"] for g in groups), "pause_after_seconds": groups[-1]["pause_after_seconds"]})
+    for group in plan:
+        groups.append(group)
+        if group["boundary"] in {"sentence", "section"}:
+            finish()
+            groups = []
+    if groups:
+        finish()
+    return batches
+
+
+def google_render(text: str, voice: str, rate: float, voices: list[dict] | None = None, *, mode: str = "modern_female", pauses: dict | None = None, respelled: bool = False) -> tuple[np.ndarray, dict]:
+    language_code = "en-US" if mode == "erasmian" else "el-GR"
+    voices = google_voices(language_code) if voices is None else voices
     selected = next((v for v in voices if v["name"] == voice), None)
-    if not selected or selected.get("ssmlGender") != "FEMALE" or "el-GR" not in selected.get("languageCodes", []):
-        raise BackendError(f"Google has not confirmed {voice} as an available Greek female voice")
-    payload = {"input": {"text": modern(text)}, "voice": {"languageCode": "el-GR", "name": voice}, "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": audio.SAMPLE_RATE, "speakingRate": rate}}
+    if not selected or selected.get("ssmlGender") != "FEMALE" or language_code not in selected.get("languageCodes", []):
+        raise BackendError(f"Google has not confirmed {voice} as an available {language_code} female voice")
+    plan = phrase_plan(text, pauses)
+    batches = google_ssml_batches(plan, mode, respelled)
+    session = google_session()
+    clips = []
+    for batch in batches:
+        payload = {"input": {"ssml": batch["ssml"]}, "voice": {"languageCode": language_code, "name": voice}, "audioConfig": {"audioEncoding": "LINEAR16", "sampleRateHertz": audio.SAMPLE_RATE, "speakingRate": rate}}
+        clip = google_request(session, payload)
+        clips.append(audio.trim_edges(clip, audio.SAMPLE_RATE))
+        batch["request_bytes"] = len(batch["ssml"].encode("utf-8"))
+        if batch["pause_after_seconds"]:
+            clips.append(np.zeros(round(audio.SAMPLE_RATE*batch["pause_after_seconds"]), dtype=np.float32))
+    return np.concatenate(clips), {"backend": "google_cloud", "voice": voice, "gender": selected["ssmlGender"], "locale": language_code, "input_style": "ipa_ssml" if mode == "erasmian" else "respelled_ssml" if respelled else "normalized_ssml", "normalized_text": modern(text, respelled) if mode != "erasmian" else None, "characters": sum(len(b["ssml"]) for b in batches), "phrase_plan": plan, "requests": batches}
+
+
+def google_request(session, payload: dict) -> np.ndarray:
     try:
-        response = google_session().post("https://texttospeech.googleapis.com/v1/text:synthesize", json=payload, timeout=60)
+        response = session.post("https://texttospeech.googleapis.com/v1/text:synthesize", json=payload, timeout=60)
     except Exception as exc:
         raise BackendError(f"Google synthesis failed ({type(exc).__name__})") from None
     if not response.ok:
-        raise BackendError(f"Google synthesis HTTP {response.status_code}: {response.json().get('error', {}).get('status', 'unknown')}")
+        error = response.json().get("error", {})
+        raise BackendError(f"Google synthesis HTTP {response.status_code}: {error.get('status', 'unknown')}; {error.get('message', '')[:300]}")
     raw = base64.b64decode(response.json()["audioContent"])
     with wave.open(io.BytesIO(raw), "rb") as f:
         if f.getsampwidth() != 2 or f.getnchannels() != 1 or f.getframerate() != audio.SAMPLE_RATE:
             raise BackendError("Unexpected Google PCM format")
         samples = np.frombuffer(f.readframes(f.getnframes()), dtype="<i2").astype(np.float32)/32768
-    return samples, {"backend": "google_cloud", "voice": voice, "gender": selected["ssmlGender"], "normalized_text": payload["input"]["text"], "characters": len(payload["input"]["text"])}
+    return samples
 
 
 def melina_render(text: str, rate: float, target: Path) -> tuple[np.ndarray, dict]:

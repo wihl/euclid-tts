@@ -1,71 +1,70 @@
 # Saved checkpoint — 2026-10-08
 
-The `starter.md` experiment has been implemented and run. All work is saved
-locally in `/Users/wihl/Projects/codex/euclid-tts`. No course files were modified.
+The original experiment and follow-up comparison are saved in this repository.
+No course files were changed. Source provenance and documentation now use
+relative paths; project-owned text passes the personal-home-path scan.
 
-## Available now
+## Listening results
 
-- Complete source Greek: `input/euclid-I23.txt`; provenance: `input/source.json`.
-- Native ARM64 Python 3.12.11 environment, `pyproject.toml`, `uv.lock`.
-- Configurable one/two/full sentences and synthesis rate.
-- Default Erasmian sample: Kokoro q8, stock `af_heart`, 30.003 seconds.
-- Default Modern Greek female sample: Google Cloud Chirp 3 HD Aoede, 27.640 seconds.
-- Original Melina fallback preserved in `work/melina-baseline/`.
-- Both modes: `output/euclid-I23-*.wav` and `output/euclid-I23-*.mp3`.
-- Test clips: `output/bakeoff/af_heart.*`, `af_bella.*`, `macos.*`.
-- Measurements: `output/model-comparison.md`, `output/qc-report.md`, and JSON.
-- Sixteen automated tests pass. PCM/MP3 decode and clipping checks pass.
-- All eighteen saved WAV/MP3 files (final, bake-off, slower and backup) decode correctly with zero clipping.
-- Modern female voice and Greek locale verified with macOS voice metadata.
-- The full cropped Greek source column agrees with the saved input after
-  documented typographic and whitespace normalization.
-- Slower synthesis at 0.85 tested: one sentence takes 8.791 seconds.
-- Final measured outcome: `output/final-report.md`.
-- Installation, pronunciation choices, cloud setup and Slides instructions:
-  `README.md`.
+The user rejected both original defaults as rushed with insufficient pauses.
+A native Greek listener, as reported by the user, also found the Modern
+reading unclear and mixing Ancient and Modern pronunciation. These results
+are recorded in `EXPERIMENTS.md`; original audio and pre-review reports are
+preserved locally in `output/round-1/` and remain excluded from Git.
 
-The Erasmian output is an **experimental approximation** with explicit
-phonemes. Subjective naturalness and complete word coverage still require
-a human listening check. No historical pitch reconstruction, voice cloning,
-or modern-phonology substitution is claimed.
+## Revised candidates
 
-## Google Cloud status
+Five full two-sentence candidates and five first-sentence controls were
+actually synthesized. Full trials use rate 0.72, eleven grammatical breath
+groups and ten explicit gaps. Short controls use 0.82 with shorter gaps.
 
-**Resolved.** The user refreshed ADC, linked billing, and enabled the
-Cloud Text-to-Speech API in `gemini-quick-start`. The live inventory confirms
-`el-GR-Chirp3-HD-Aoede` is female. Both a short test and the full selected
-passage have been rendered successfully with that voice. No additional
-credential or setup is needed for the current project.
+- New default Erasmian: Google en-US-Wavenet-F, per-word IPA, 54.162 seconds.
+- New default Modern female: Greek el-GR-Wavenet-B, normalized input, 38.755 seconds.
+- Slower local Kokoro af_heart: 48.803 seconds.
+- WaveNet Modern phonetic-spelling trial: 39.087 seconds.
+- Slower Greek Chirp Aoede: 56.092 seconds.
 
-```bash
-export UV_CACHE_DIR="$PWD/.cache/uv"
-uv run python -m euclid_tts voices
-uv run python -m euclid_tts build --voice modern_female
-```
+Modern normalization now omits tonos on monosyllabic function words. A
+separate spelling trial supplies modern sound cues for unfamiliar Ancient
+forms. The Ancient wording, inflections and original polytonic input remain
+unchanged. No accuracy or naturalness verdict is claimed for the revisions.
+A native-speaker listening review remains needed.
 
-The early RefreshError and SERVICE_DISABLED diagnostics are historical.
-Current final audio uses Google, with the previous local fallback saved.
+Each candidate has PCM WAV, MP3, JSON and measured QC in `output/round-2/`.
+The new defaults also occupy `output/euclid-I23-*.{wav,mp3,json}`.
+`output/model-comparison.md` links all five full candidates and reports
+measurements; `output/final-report.md` describes the new defaults.
 
-## Reproduce the local experiment
+## Environment and verification
+
+Native ARM64 Python 3.12.11, uv-managed locked dependencies, FFmpeg and the
+cached pinned Kokoro q8 model remain available. No new model download or
+training was needed. Twenty-four automated tests pass. All 42 saved WAV/MP3
+files fully decode without clipping; five full revisions have zero raw
+synthesis overloads. Source SHA-256 remains
+`4b364cf450c5a905e00c0320b06d1e44510fc2d840adfbe013174c40d061333e`.
+
+Google ADC, billing and Text-to-Speech API enablement are resolved. Live
+inventories verified female Greek and English voices before synthesis.
+No further cloud setup is needed on the original machine. Credentials were
+not copied into the project; fresh clones need README setup.
+
+## Reproduction
 
 ```bash
 export UV_CACHE_DIR="$PWD/.cache/uv"
 uv sync --python 3.12 --locked
 uv run pytest -q
-uv run python -m euclid_tts build --voice erasmian
-uv run python -m euclid_tts build --voice modern_female
+uv run python tools/check_public_paths.py
+uv run python -m euclid_tts build
+uv run python -m euclid_tts --config experiments/round-2-erasmian-kokoro.yaml build
+uv run python -m euclid_tts --config experiments/round-2-modern-chirp.yaml build
+uv run python -m euclid_tts --config experiments/round-2-modern-wavenet-respelled.yaml build
 ```
 
-The pinned Kokoro model is already in `.cache/huggingface`; the Erasmian
-run now works without model network access. Source bytes are never changed.
-Downloaded models, output audio and scratch files are excluded from Git
-but remain on disk. Nothing has been uploaded to Google Drive or the deck.
-
-## Final verification
-
-Source preservation, ARM64 environment, sentence selection, slower local
-synthesis and audio integrity are verified. The Google slower-rate check
-passed (11.754 seconds for one sentence at 0.85), and final reports are saved.
-The complete default build command was tested successfully. No user input is needed. A human
-listening pass remains useful before presenting the experimental Erasmian
-pronunciation; objective file checks do not establish naturalness.
+All full and short configurations are saved in `experiments/`.
+`uv run python tools/round_two.py` regenerates the complete comparison;
+`uv run python tools/final_report.py` refreshes reports from those saved outputs.
+The original short bake-off has its own report under `output/bakeoff/`.
+Generated audio, model caches, environments and intermediate course extracts
+are excluded from Git. Nothing was uploaded to Drive or the shared deck.

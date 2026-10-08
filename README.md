@@ -7,19 +7,30 @@ experiment for MATH E-139, taught by Graeme Bird. All code and phonetic
 transcriptions were prepared with AI assistance. No professor's voice is
 cloned, adapted, or used to train a model.
 
-The completed run generated both voices: Kokoro `af_heart` and Google Cloud
-`el-GR-Chirp3-HD-Aoede`. Google authentication, billing and API enablement are
-set up. The earlier Melina female fallback is retained as a local backup.
-Exact durations, measured runtime and limitations are in `output/final-report.md`.
+The first samples failed the user's listening review: both sounded rushed,
+and a native Greek listener found the Modern reading unclear and mixed.
+Feedback is recorded in `EXPERIMENTS.md`; original samples and pre-review
+reports are preserved in `output/round-1/`.
 
-The Erasmian output uses the small Apache-2.0
+Revised defaults try **Google `en-US-Wavenet-F` with word-level Erasmian IPA**
+(54.16 seconds) and **`el-GR-Wavenet-B` with Modern normalized text** (38.75
+seconds). Both use synthesis rate 0.72 and grammatical pauses. Slower Kokoro,
+slower Greek Chirp and a Modern phonetic-spelling trial are also saved in
+`output/round-2/`. Improved accuracy and naturalness remain unverified by
+listening. Measurements and links are in `output/model-comparison.md`.
+
+Google authentication, billing and API enablement are set up on the original
+machine. Fresh installations need the setup below; no credentials are in
+this repository. The earlier Melina female fallback remains a local backup.
+
+The local Erasmian alternative uses the small Apache-2.0
 [Kokoro ONNX model](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX),
 with manually specified phonemes and its stock American female `af_heart`
 voice. It runs on CPU through native ARM64 ONNX Runtime. Model weights are
 92.4 MB, plus about 0.52 MB per voice. There is no PyTorch, CUDA, training,
 server, or dependency on the course repository after the input is saved.
 
-The preferred Modern Greek voice is Google Cloud `el-GR-Chirp3-HD-Aoede`.
+The current Modern Greek trial uses Google Cloud `el-GR-Wavenet-B`.
 The program checks the live inventory for **el-GR and FEMALE** before making
 a synthesis request. `backend: auto` falls back to the installed macOS
 **Melina** female Greek voice if Google is unavailable. `backend: google_cloud`
@@ -63,17 +74,16 @@ uv sync --python 3.12 --locked
 uname -m
 uv run python -c "import platform; print(platform.machine())"
 uv run pytest -q
-uv run python -m euclid_tts bakeoff
 uv run python -m euclid_tts build
 ```
 
-Both architecture commands must print `arm64`. The first Erasmian run
+Both architecture commands must print `arm64`. The first local Kokoro run
 downloads only the pinned model, phoneme vocabulary and selected stock voice
 to `.cache/huggingface`. Subsequent local runs reuse them without network
 access. `uv.lock` pins Python packages; the synthesis module pins model and
 vocabulary revisions and records downloaded file hashes. Memory use for the
-tested local voices stayed below 1 GB. On this Mac, the cached 30-second
-Erasmian sample took about 11 seconds to generate and export.
+tested local voices stayed below 1 GB. The local alternative works without
+Cloud access after caching its weights; both current defaults require Google.
 
 Independently generate either voice:
 
@@ -82,11 +92,11 @@ uv run python -m euclid_tts build --voice erasmian
 uv run python -m euclid_tts build --voice modern_female
 ```
 
-Render one sentence or a slower reading:
+Render one sentence or override synthesis speed:
 
 ```bash
 uv run python -m euclid_tts build --sentences 1
-uv run python -m euclid_tts build --voice erasmian --sentences 1 --rate 0.85 --output-dir work/slower
+uv run python -m euclid_tts build --voice erasmian --sentences 1 --rate 0.82 --output-dir work/slower
 uv run python -m euclid_tts qc
 ```
 
@@ -96,7 +106,7 @@ support is validated by actually submitting requests; a service error is
 reported rather than claiming an ignored setting worked.
 
 Edit `config.yaml` to persist `speech.rate`, `passage.sentence_count`, voice,
-backend, output directory or formats. `passage.selection: full` selects all
+backend, pause durations, output directory or formats. `passage.selection: full` selects all
 five complete sentences; full synthesis is supported but was not part of the
 initial run. The Erasmian lexicon is deliberately limited to this proposition.
 Unknown words or model phonemes fail instead of being dropped. A WAV master
@@ -104,6 +114,45 @@ is always retained, including when MP3 is the only requested export format.
 
 An alternative configuration can be used with
 `uv run python -m euclid_tts --config path/to/config.yaml build`.
+
+## Follow-up comparisons and pauses
+
+Regenerate all five revised full samples, five short controls and reports:
+
+```bash
+uv run python tools/round_two.py
+```
+
+Or render one alternative independently:
+
+```bash
+uv run python -m euclid_tts --config experiments/round-2-erasmian-kokoro.yaml build
+uv run python -m euclid_tts --config experiments/round-2-modern-chirp.yaml build
+uv run python -m euclid_tts --config experiments/round-2-modern-wavenet-respelled.yaml build
+uv run python -m euclid_tts --config experiments/short/round-2-modern-wavenet.yaml build
+```
+
+Full recipes use rate 0.72; short controls use 0.82 and shorter pauses.
+Both sets have saved configurations. Cloud output can vary between calls.
+Eleven reviewed breath groups preserve every word and label. The full
+opening has ten planned gaps totaling 8.05 seconds, with no final gap:
+
+```yaml
+speech:
+  rate: 0.72
+  pauses:
+    phrase: 0.65
+    comma: 0.85
+    section: 1.15
+    sentence: 1.3
+```
+
+Pause durations accept 0.15–2.0 seconds. Google receives `<break>` tags
+within sentence/section requests; explicit PCM silence separates those
+requests. Kokoro renders breath groups separated by PCM silence. Engine
+silence can add to the settings; decoded pause measurements are recorded.
+The optional macOS fallback uses native punctuation rather than these explicit
+pause controls. Defaults require Google so fallback cannot replace the trials.
 
 ## Pronunciation conventions and evidence
 
@@ -139,15 +188,21 @@ historically reconstructed Attic system or as a complete match to Bird.
 `pronunciation.py` contains the manually reviewed finite word table. Kokoro
 uses IPA-like tokens `A`, `I`, `O`, `W` for English diphthongs; output JSON
 also contains an expanded IPA display. Every input token is checked against
-the model vocabulary. Greek letter groups ΑΒ and ΔΓΕ are expanded to
+the model vocabulary. Google Erasmian wraps each word in an English IPA
+`<phoneme>` tag, adapting /ɑ/ to its documented /ɑː/ symbol without claiming
+Greek quantity. Greek letter groups ΑΒ and ΔΓΕ are expanded to
 individual Greek letter names. The two final modes read the same selection.
 
 Modern normalization maps acute/grave/circumflex to tonos, removes breathings
 and iota subscripts, keeps diaeresis, and expands labels. Raised dots become
 commas for pauses: a semicolon would be a Greek question mark. It retains Ancient
 Greek words and inflections: this is their pronunciation with Modern Greek
-sounds, not a Modern Greek translation. Monosyllables may retain a tonos
-that modern orthography would omit.
+sounds, not a Modern Greek translation. Monosyllabic function words now omit
+tonos according to the [Modern convention](https://www.greek-language.gr/greekLang/modern_greek/tools/lexica/triantafyllides/search.html?lq=%CF%84%CE%BF%CE%BD%CE%AF%CE%B6%CF%89).
+The optional `modern_female.input: respelled` trial makes /i/ and /ef, af/
+explicit in unfamiliar Ancient forms: `δοθείσῃ` → `δοθίσι`, `εὐθείᾳ` →
+`εφθία`, `συστήσασθαι` → `σιστίσασθε`. These are phonetic input cues,
+not proper Greek orthography. Their effectiveness needs human review.
 
 ## Google Cloud TTS Setup
 
@@ -201,11 +256,12 @@ and [authentication documentation](https://cloud.google.com/text-to-speech/docs/
    Python, YAML, command output, logs or Git.
 7. Google's [current pricing](https://cloud.google.com/text-to-speech/pricing)
    lists Chirp 3 HD at $30 per million characters beyond a 1-million-character
-   monthly allowance. The selected Modern input is 406 characters, about
-   **$0.0122** at the paid rate; a small bake-off and rebuild cost pennies
-   if outside the allowance. This is a list-price estimate, not a billing
-   receipt. The current table lists WaveNet/Standard at $4 per million beyond
-   a 4-million-character allowance. Check the linked table before use.
+   monthly allowance. WaveNet/Standard is $4 per million beyond a
+   4-million-character allowance. SSML tags count toward billable characters;
+   output JSON records request character counts and byte sizes. Short WaveNet
+   requests cost fractions of a cent at list price; the bounded comparison
+   costs cents outside allowances. This is an estimate, not a billing receipt.
+   Check the linked table before use.
 8. Afterward, optional cleanup is:
 
    ```bash
@@ -231,20 +287,22 @@ ADC, and does not implement key authentication. See Google's
 [live voice list](https://cloud.google.com/text-to-speech/docs/list-voices-and-types)
 documents Greek Chirp 3 HD female voices, plus `el-GR-Wavenet-B` and
 `el-GR-Standard-B`. The older `-A` identifiers are absent from that current
-list. The selected Chirp voice uses plain text. Google's
+list. Revised cloud candidates use SSML breaks. Google's
 [Chirp 3 documentation](https://cloud.google.com/text-to-speech/docs/chirp3-hd)
 currently describes preview SSML/voice controls. Its
 [phoneme language table](https://cloud.google.com/text-to-speech/docs/phonemes)
-does not list Greek, so Greek phoneme overrides are not assumed to work.
-This is why Modern Greek language support is not used as evidence for
-Erasmian synthesis.
+does not list Greek, so Modern candidates use normalized or respelled text
+without Greek IPA overrides. The Erasmian alternative uses the documented
+English alphabet with a verified English female voice. Markup acceptance
+does not establish the actual pronunciation heard in the audio.
 
 ## Tested approaches and output
 
-`uv run python -m euclid_tts bakeoff` renders the complete opening statement
-as a 5–10-second test. It tests Kokoro q8 with `af_heart` and `af_bella`, Google
+The original `uv run python -m euclid_tts bakeoff` renders the opening
+statement. It tests Kokoro q8 with `af_heart` and `af_bella`, Google
 Modern Greek with the configured female voice if accessible, and macOS Melina.
-It saves each clip plus `output/model-comparison.md` and JSON with timings,
+It saves clips and comparison reports in `output/bakeoff/`. Use
+`tools/round_two.py` for the revised engine comparisons. Both record
 duration, mode, voice, model hashes, resource measurements and failures.
 
 The second Hugging Face candidate,
@@ -275,7 +333,8 @@ failure diagnostics; `.cache/` holds downloads. None is tracked by Git.
 
 The tests cover immutable UTF-8/polytonic source bytes, both sentence counts,
 full selection, normalization, breathings, geometrical names, output names,
-invalid configuration, real PCM/MP3 decoding, silence and overload detection.
+invalid configuration, SSML word coverage and request byte limits, actual
+PCM pause placement, portable provenance, PCM/MP3 decoding and overloads.
 Output reports include duration, sample format, clipping, RMS/peak levels,
 leading/trailing silence, internal pauses, and the exact selected text. WAV
 export preserves 120 ms around audible edges. It attenuates only when needed,
@@ -291,8 +350,18 @@ swift -module-cache-path .cache/swift-modules tools/voice_info.swift
 Saved final, test, slower and backup WAV/MP3 files were fully decoded.
 The measured completion report is `output/final-report.md`; the full decode
 record is `output/all-audio-integrity.json`. `PROGRESS.md` records the completed
-Cloud setup and saved outputs. The final report can be refreshed after the
-standard and slower builds with `uv run python tools/final_report.py`.
+Cloud setup, feedback and revisions. Refresh reports after generating the
+round-2 configurations with `uv run python tools/final_report.py`.
+
+Provenance paths are relative to the external course-materials root; reports
+use project-relative paths. Before publishing, run:
+
+```bash
+uv run python tools/check_public_paths.py
+```
+
+This scans project-owned text, including ignored reports, for personal absolute
+home paths. Dependencies, caches, Git internals and binary artifacts are excluded.
 
 No automated check proves subjective naturalness, historical accuracy or
 complete word coverage. A human listening pass is required before presenting
@@ -303,11 +372,13 @@ and no word or label repeats. English-trained Kokoro may reduce vowels,
 blend ευ poorly, or give unfamiliar Greek an English rhythm. Its successful
 phoneme encoding is evidence about input control, not a listening verdict.
 
-Further experimentation is useful if listening finds a particular wrong
-vowel, stress or missing word: adjust that word's finite phoneme entry or try
-the other saved stock voice. Improving the approximation to the professor's
-individual classroom conventions requires an additional documented example.
-There is no reason to train a model or expand into a general phonology engine.
+The first review identified pacing and mixed pronunciation as problems.
+Revised comparisons address pacing and test explicit pronunciation input
+with alternative engines. A native-speaker review should identify remaining
+wrong vowels, stress or unclear words. Ancient wording still sounds archaic
+with Modern sounds; translating it would be a separate task. Further
+individual classroom conventions need documented examples. No training or
+broad phonology engine is involved.
 
 ## Put the MP3s in Google Slides
 
