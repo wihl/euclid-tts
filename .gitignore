@@ -1,1 +1,8 @@
 .env
+.venv/
+.cache/
+work/
+output/
+__pycache__/
+.pytest_cache/
+*.egg-info/

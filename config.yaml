@@ -1,0 +1,18 @@
+passage:
+  proposition: I.23
+  selection: first_sentences
+  sentence_count: 2
+speech:
+  rate: 1.0
+voices:
+  erasmian:
+    enabled: true
+    backend: kokoro
+    voice: af_heart
+  modern_female:
+    enabled: true
+    backend: auto
+    voice: el-GR-Chirp3-HD-Aoede
+output:
+  directory: output
+  formats: [wav, mp3]
