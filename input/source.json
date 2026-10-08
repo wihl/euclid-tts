@@ -7,7 +7,7 @@
   "course_transcription": "coursework/projects/2026-project-i23/greek/writeup.qmd: i23 vector",
   "input_sha256": "4b364cf450c5a905e00c0320b06d1e44510fc2d840adfbe013174c40d061333e",
   "verification": "Greek column extracted locally; source page image viewed; copied six Greek parts verbatim from course transcription. PDF text layer has spacing breathings and U+0387 where course transcription uses precomposed letters and U+00B7. These typographic equivalents are documented, not silently substituted in input.",
-  "selection": "Two complete full-stop-delimited sentences; second includes setting-out and specification joined by an ano teleia.",
+  "selection": "Default is now one complete full-stop-delimited opening sentence (the enunciation). Optional two-sentence selection includes setting-out and specification joined by an ano teleia.",
   "independent_pdf_column_comparison": "PASS: all 724 non-whitespace Greek/punctuation characters agree after removing figure-only lines, composing capital spacing breathings, NFC, and whitespace folding.",
   "canonical_character_count": 724
 }

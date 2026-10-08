@@ -58,6 +58,8 @@ def validate(cfg: dict) -> dict:
             raise ValueError("Google Erasmian requires an en-US voice with IPA controls")
         if name == "modern_female" and v.get("input", "normalized") not in {"normalized", "respelled"}:
             raise ValueError("modern_female.input must be normalized or respelled")
+        if type(v.get("level_speech", False)) is not bool:
+            raise ValueError(f"{name}.level_speech must be true or false")
     formats = cfg["output"].get("formats")
     if not isinstance(formats, list) or not formats or len(set(formats)) != len(formats) or set(formats)-{"wav", "mp3"}:
         raise ValueError("output.formats must contain wav and/or mp3 without duplicates")
@@ -111,6 +113,8 @@ def build(cfg, out, voice=None, sentence_count=None):
             meta["ipa"] = ipa(erasmian(selected))
         else:
             data, meta = render_modern(selected, v, cfg["speech"]["rate"], ROOT/"work/modern-raw.wav", pauses)
+        if v.get("level_speech", False):
+            data, meta["leveling"] = audio.level_speech(data)
         wav = out / f"{VOICE_NAMES[name]}.wav"
         meta.update(audio.write_wav(wav, data))
         files = [wav]
@@ -177,7 +181,7 @@ def bakeoff(cfg, out):
 
 def qc(out):
     records = []
-    lines = ["# Audio QC", "", "Measured file integrity; subjective naturalness and complete word coverage need a human listening pass.", ""]
+    lines = ["# Audio QC", "", "Measured file integrity; listening feedback is recorded in EXPERIMENTS.md. Automated checks do not establish pronunciation accuracy or subjective naturalness.", ""]
     for name in VOICE_NAMES.values():
         metadata_file = out/f"{name}.json"
         if not metadata_file.exists():
@@ -192,6 +196,10 @@ def qc(out):
             lines.append(f"| {c['file']} | {c['duration_seconds']:.3f}s | OK | {peak} | {c.get('clipped_samples', '—')} |")
         wav = checks[0]
         lines += ["", f"Edge silence: {wav['leading_silence_seconds']:.3f}s / {wav['trailing_silence_seconds']:.3f}s. Internal pauses ≥300 ms: {wav['internal_silences_over_300ms']}.", f"Raw overload samples before export: {meta['raw_overload_samples']}. Source SHA-256: `{meta['source_sha256']}`.", ""]
+        if "leveling" in meta:
+            lines += [f"Speech leveling: {meta['leveling']['method']}; 2:1 compression with +6 dB makeup. Frame count unchanged. Original synthesis overloads: {meta['leveling']['synthesis_raw_overload_samples']}. Filter: `{meta['leveling']['filter']}`.", ""]
+        if meta.get("render_source", {}).get("pcm_identical_to_approved_prefix"):
+            lines += ["Delivered PCM is a lossless first-sentence excerpt of the Modern reading judged accurate by a native Greek speaker, as reported by the user.", ""]
         if meta["backend"] == "kokoro":
             lines += ["Pronunciation input: every token was encoded without dropping symbols; stress marks, rough breathings, diphthongs and letter names are in the recorded phoneme strings. This establishes input control. Their realization in the audio and subjective naturalness still need listening.", ""]
         if "voice_gender_verification" in meta:

@@ -7,6 +7,11 @@ from pathlib import Path
 import numpy as np
 
 SAMPLE_RATE = 24000
+SPEECH_LEVEL_FILTER = (
+    "acompressor=threshold=0.063096:ratio=2:attack=5:release=80:"
+    "makeup=1.995262:detection=rms,"
+    "alimiter=limit=0.89:attack=5:release=50:level=0:latency=1"
+)
 
 
 def read_wav(path: Path) -> tuple[np.ndarray, int]:
@@ -23,6 +28,32 @@ def trim_edges(data: np.ndarray, sr: int) -> np.ndarray:
         raise ValueError("Synthesis returned silent audio")
     pad = int(0.12 * sr)
     return data[max(0, active[0]-pad):min(len(data), active[-1]+pad+1)]
+
+
+def level_speech(data: np.ndarray, sr: int = SAMPLE_RATE) -> tuple[np.ndarray, dict]:
+    """Gentle compression brings quiet speech forward without stretching audio.
+
+    A -24 dBFS threshold, 2:1 ratio and +6 dB makeup gain reduce loud/quiet
+    contrast. A latency-compensated limiter retains headroom. Literal zero
+    pauses remain zero; original synthesis overloads remain in metadata.
+    """
+    data = np.asarray(data, dtype=np.float32).reshape(-1)
+    if not data.size or not np.isfinite(data).all():
+        raise ValueError("Empty or non-finite audio")
+    result = subprocess.run([
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "f32le",
+        "-ar", str(sr), "-ac", "1", "-i", "pipe:0", "-af", SPEECH_LEVEL_FILTER,
+        "-f", "f32le", "pipe:1",
+    ], input=data.astype("<f4").tobytes(), capture_output=True, check=True)
+    leveled = np.frombuffer(result.stdout, dtype="<f4").copy()
+    if len(leveled) != len(data) or not np.isfinite(leveled).all():
+        raise ValueError("Speech leveling changed frame count or returned invalid audio")
+    return leveled, {
+        "method": "FFmpeg gentle compression and peak limiting", "filter": SPEECH_LEVEL_FILTER,
+        "synthesis_raw_peak": float(np.max(np.abs(data))),
+        "synthesis_raw_overload_samples": int(np.count_nonzero(np.abs(data) >= 1)),
+        "same_frame_count": True,
+    }
 
 
 def write_wav(path: Path, data: np.ndarray, sr: int = SAMPLE_RATE) -> dict:

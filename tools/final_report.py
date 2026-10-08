@@ -1,4 +1,5 @@
 """Refresh the listening-feedback comparison from saved audio; no API calls."""
+import hashlib
 import json
 
 from euclid_tts import audio
@@ -12,6 +13,14 @@ FEEDBACK = (
     "a mixture of Ancient and Modern pronunciation. These are listening results; the earlier passing "
     "file checks did not establish quality. Neither round-1 sample is an accepted final result. "
     "Original audio and pre-review reports remain in `round-1/`; see `../EXPERIMENTS.md`."
+)
+LATEST_REVIEW = (
+    "The user judged the revised readings much better. A native Greek speaker, as reported by the user, "
+    "found the default Modern WaveNet reading accurate. The Erasmian reading had some overly quiet "
+    "word endings. The user requested one sentence to shorten the presentation clips. Current defaults "
+    "read only the opening enunciation, retaining rate 0.72 and its three phrase pauses. Erasmian adds "
+    "gentle volume leveling. The shortened Modern WAV delivered for this review was an exact PCM excerpt "
+    "of the approved performance."
 )
 
 
@@ -37,7 +46,7 @@ def main():
     m = read(OUT/"euclid-I23-modern-female.json")
     source = read(ROOT/"input/source.json")
     assert e["selected_greek"] == m["selected_greek"]
-    assert all(c["selected_greek"] == e["selected_greek"] for c in candidates)
+    assert all(c["selected_greek"] == candidates[0]["selected_greek"] for c in candidates)
     assert all(c["source_sha256"] == source["input_sha256"] for c in candidates)
     all_audio = []
     for folder in [OUT, ROOT/"work/slower", ROOT/"work/melina-baseline"]:
@@ -48,7 +57,10 @@ def main():
     assert all(c["raw_overload_samples"] == 0 for c in candidates)
     (OUT/"all-audio-integrity.json").write_text(json.dumps(all_audio, ensure_ascii=False, indent=2)+"\n")
 
-    lines = ["# Round 2: slower, phrased readings", "", FEEDBACK, "", "## Full comparisons", "",
+    lines = ["# Listening results and saved comparisons", "", LATEST_REVIEW, "",
+        "The tables below preserve the historical two-sentence comparisons and short controls. "
+        "Current one-sentence defaults are described in [final-report.md](final-report.md).", "",
+        "## Original listening feedback", "", FEEDBACK, "", "## Round-2 full comparisons", "",
         "Every full candidate uses synthesis rate **0.72**, with requested phrase/comma/section/sentence "
         "pauses of **0.65/0.85/1.15/1.30 seconds**. All read the same two Ancient sentences. Eleven reviewed "
         "breath groups give ten planned gaps, totaling 8.05 seconds before engine-generated silence. "
@@ -60,8 +72,9 @@ def main():
         style = c.get("input_style", "explicit phonemes / separate breath groups")
         mp3 = next(item["file"] for item in c["audio"] if item["file"].endswith(".mp3"))
         lines.append(f"| {c['candidate']} | {c['backend']} / {c['voice']} | {style} | {a['duration_seconds']:.3f}s | {c['elapsed_seconds']:.2f}s | {len(a['internal_silences_over_300ms'])} | [listen](round-2/{c['candidate']}/{mp3}) |")
-    lines += ["", "New default files use **Google English IPA Erasmian** and **Greek WaveNet normalized**. "
-        "This selects alternative engines for the next listening pass; no subjective winner is claimed. "
+    lines += ["", "Current defaults retain **Google English IPA Erasmian** and **Greek WaveNet normalized**, "
+        "shortened to one sentence, with Erasmian leveling. The native listener approved the normalized "
+        "Modern reading. "
         "Slower local Kokoro, respelled WaveNet and slower Chirp remain available.", "",
         "## Pronunciation changes and limits", "",
         "Modern input still removes breathings/subscripts, maps accents to tonos, and expands labels. "
@@ -82,9 +95,9 @@ def main():
         "Course notes support rough /h/, silent subscript in τῷ, and equality of δέ/δή; other choices "
         "are selected prototype conventions. No reconstructed pitch accent or speaker imitation is used.", "",
         "Modern pronunciation retains Ancient grammar and wording, so it still sounds linguistically archaic. "
-        "No word-level listening diagnoses were supplied; the reported mixture cannot yet be attributed "
-        "to specific vowels, consonants, stress or grammar. The revisions have no human accuracy/naturalness "
-        "verdict yet. No ASR completeness verdict is claimed.", "",
+        "The earlier report of mixed pronunciation was superseded by the native listener's approval of "
+        "the default WaveNet reading. Other Modern variants have no reported listening verdict. "
+        "The Erasmian volume adjustment still needs a listening check. No ASR completeness verdict is claimed.", "",
         "## Short controls", "",
         "Five first-sentence trials preceded the full renders, using rate **0.82** and pauses "
         "**0.45/0.65/0.90/1.10 seconds**. Exact recipes are in `../experiments/short/`; "
@@ -123,23 +136,45 @@ def main():
         "[Chirp SSML, currently preview](https://cloud.google.com/text-to-speech/docs/chirp3-hd)."]
     write("model-comparison.md", lines)
     comparison = {"feedback": FEEDBACK, "candidates": candidates, "short_control_candidates": short,
-                  "human_review_of_revisions": "pending", "source_sha256": source["input_sha256"]}
+                  "latest_review": LATEST_REVIEW,
+                  "human_review_of_revisions": {"modern_wavenet": "accurate, native speaker as reported by user", "erasmian": "much better, quiet endings reported; new leveling awaits review"},
+                  "source_sha256": source["input_sha256"]}
     (OUT/"model-comparison.json").write_text(json.dumps(comparison, ensure_ascii=False, indent=2)+"\n")
-    final = ["# Saved result after listener feedback", "", FEEDBACK, "", "## New experimental defaults", "",
-        "| Mode | Voice | WAV duration | Old default |", "| --- | --- | ---: | ---: |"]
+    final = ["# One-sentence presentation clips", "", LATEST_REVIEW, "", "## Current defaults", "",
+        "| Mode | Voice | WAV duration | Round-2 two-sentence |", "| --- | --- | ---: | ---: |"]
     for mode, meta, stem in [("Erasmian", e, "euclid-I23-erasmian"), ("Modern female", m, "euclid-I23-modern-female")]:
-        old_path = OUT/"round-1"/f"{stem}.json"
-        # Original audio is local and Git-ignored; fresh clones still retain
-        # the documented round-1 measurements, not fabricated baseline audio.
-        old_seconds = read(old_path)["audio"][0]["duration_seconds"] if old_path.exists() else (30.003 if mode == "Erasmian" else 27.640)
+        old_path = OUT/"round-2/reviewed-defaults"/f"{stem}.json"
+        candidate_name = "erasmian-google" if mode == "Erasmian" else "modern-wavenet"
+        baseline = read(old_path) if old_path.exists() else next(c for c in candidates if c["candidate"] == candidate_name)
+        old_seconds = baseline["audio"][0]["duration_seconds"]
         final.append(f"| {mode} | {meta['voice']} | {meta['audio'][0]['duration_seconds']:.3f}s | {old_seconds:.3f}s |")
-    final += ["", "Both defaults use rate 0.72 and explicit grammatical pauses. They are readings for "
-        "review; improved pronunciation and naturalness are not yet established. Alternatives remain saved.", "",
+    final += ["", "Both defaults use rate 0.72 with four breath groups and three 0.65-second phrase "
+        "pauses (1.95 seconds requested in total). The longer approved/reference files are preserved in "
+        "`round-2/reviewed-defaults/`. Future Cloud reruns can vary slightly. "
+        + ("This Modern PCM preserves the approved reading exactly." if m.get("render_source", {}).get("pcm_identical_to_approved_prefix") else "This is a fresh Cloud render using the reviewed Modern settings."), "",
         "## Exact selected Greek", "", e["selected_greek"], "",
         f"{source['edition']}; {source['locator']}. {source['independent_pdf_column_comparison']}", "",
         f"Source SHA-256: `{source['input_sha256']}`. Source bytes are unchanged.", "",
         "See [comparisons and commands](model-comparison.md), [default QC](qc-report.md), and "
         "`all-audio-integrity.json` for measurements. Feedback is in `../EXPERIMENTS.md`. Google setup works."]
+    check_path = OUT/"erasmian-level-check.json"
+    if check_path.exists() and read(check_path).get("after_wav_sha256") == hashlib.sha256((OUT/"euclid-I23-erasmian.wav").read_bytes()).hexdigest():
+        check = read(check_path)
+        final += ["", "## Erasmian ending-volume check", "",
+            "Google word-mark timestamps were measured on a diagnostic render whose PCM matches the "
+            "reviewed first sentence after applying its saved export gain. Each ending uses the same "
+            "last-200-ms active interval before and after leveling. Some consonants and unstressed syllables "
+            "naturally have less energy; these levels support the quiet-ending concern without proving "
+            "pronunciation errors.", "",
+            "| Word | Original ending RMS | Leveled ending RMS | Gain |",
+            "| --- | ---: | ---: | ---: |"]
+        for row in check["words"]:
+            if row["word"] in {"εὐθείᾳ", "εὐθυγράμμῳ", "συστήσασθαι"}:
+                final.append(f"| {row['word']} | {row['before_tail_dbfs']:.1f} dBFS | {row['after_tail_dbfs']:.1f} dBFS | +{row['tail_gain_db']:.1f} dB |")
+        final += ["", "Erasmian uses gentle 2:1 compression at -24 dBFS, +6 dB makeup and a "
+            "latency-compensated peak limiter. No frame count, pitch, synthesis speed or pause position "
+            "is changed by that processing. WAV and MP3 decode without clipping. Detailed word windows "
+            "are saved in `erasmian-level-check.json`. The adjusted Erasmian output awaits listening."]
     write("final-report.md", final)
     print(f"Saved five full comparisons and five short controls; {len(all_audio)} audio files decode without clipping")
 

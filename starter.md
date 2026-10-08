@@ -99,7 +99,7 @@ Use the course's official description to establish the proposition's structure a
 
 The complete proposition is expected to require approximately 90 seconds to read, which is unnecessarily long for this experiment.
 
-Therefore, **default to the first two sentences**, or a shorter coherent opening passage if the first two sentences are unusually long.
+Following listening review, **default to the first complete sentence** (the enunciation), retaining the clearer pauses and slower delivery. The two-sentence option remains available for comparison.
 
 The sample length must be configurable.
 
@@ -109,7 +109,7 @@ For example:
 passage:
   proposition: "I.23"
   selection: "first_sentences"
-  sentence_count: 2
+  sentence_count: 1
 ```
 
 Support at least:
@@ -387,7 +387,7 @@ A suggested configuration:
 passage:
   proposition: "I.23"
   selection: "first_sentences"
-  sentence_count: 2
+  sentence_count: 1
 
 speech:
   rate: 1.0
@@ -583,4 +583,3 @@ At completion, report:
 **The principal deliverable is two short, contrasting readings of the same Greek text—not a general-purpose TTS system.**
 
 Begin by examining the available course materials and identifying the passage. Then perform the smallest useful synthesis experiment and continue through final audio generation and QC.
-

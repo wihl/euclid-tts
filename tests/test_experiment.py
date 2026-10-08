@@ -191,3 +191,41 @@ def test_public_path_scan_catches_metadata_and_home_root(tmp_path):
     (tmp_path/".venv").mkdir()
     (tmp_path/".venv/installed.txt").write_text(home+"/python")
     assert set(scanner.personal_paths(tmp_path)) == {"source.json", "checkpoint.md"}
+
+
+def test_speech_leveling_lifts_quiet_endings_and_preserves_pauses(tmp_path):
+    sr = audio.SAMPLE_RATE
+    carrier = np.sin(2*np.pi*220*np.arange(sr)/sr).astype(np.float32)
+    data = np.concatenate([0.5*carrier, 0.025*carrier, np.zeros(sr//2), 0.5*carrier]).astype(np.float32)
+    leveled, meta = audio.level_speech(data)
+    rms = lambda value: float(np.sqrt(np.mean(value**2)))
+    body = slice(sr//2, sr)
+    tail = slice(3*sr//2, 2*sr)
+    contrast_before = 20*np.log10(rms(data[body])/rms(data[tail]))
+    contrast_after = 20*np.log10(rms(leveled[body])/rms(leveled[tail]))
+    assert contrast_after < contrast_before-4
+    assert rms(leveled[tail]) > 1.5*rms(data[tail])
+    assert len(leveled) == len(data) and meta["same_frame_count"]
+    assert np.max(np.abs(leveled)) <= 0.891
+    assert np.count_nonzero(leveled[2*sr:5*sr//2]) == 0
+    assert meta["synthesis_raw_overload_samples"] == 0
+    wav = tmp_path/"leveled.wav"
+    audio.write_wav(wav, leveled)
+    assert audio.inspect(audio.export_mp3(wav))["clipped_samples"] == 0
+
+
+def test_leveling_does_not_hide_synthesis_overloads():
+    raw = np.ones(2400, dtype=np.float32)*1.1
+    leveled, meta = audio.level_speech(raw)
+    assert meta["synthesis_raw_overload_samples"] == len(raw)
+    assert np.max(np.abs(leveled)) <= 0.891
+
+
+def test_current_defaults_use_one_sentence_and_level_only_erasmian():
+    cfg = validate(config())
+    assert cfg["passage"]["sentence_count"] == 1
+    assert cfg["voices"]["erasmian"]["level_speech"] is True
+    assert not cfg["voices"]["modern_female"].get("level_speech", False)
+    cfg["voices"]["erasmian"]["level_speech"] = "true"
+    with pytest.raises(ValueError, match="level_speech"):
+        validate(cfg)

@@ -41,7 +41,7 @@ full comparison at rate 0.72 with 0.65-second phrase, 0.85-second comma,
 | Google el-GR-Wavenet-B Modern spelling trial | Explicit modern sound cues, same rate/pauses | 39.087 s |
 | Google el-GR-Chirp3-HD-Aoede Modern | Normalized accents, slower rate, SSML pauses | 56.092 s |
 
-These are generation and measurement results, not new listening verdicts.
+These were generation and measurement results before the next listening review.
 Both revised default files use alternative WaveNet voices. Kokoro and Chirp
 remain available, and the phonetic-spelling intervention can be compared
 against normalized WaveNet. Ancient wording and inflections remain intact;
@@ -54,3 +54,44 @@ preservation, SSML word/letter coverage, request byte limits and actual PCM
 pause placement. The public-path scan passes. The latest measured report
 and audio links are in `output/model-comparison.md`; recipes for both the
 short controls and full comparisons are in `experiments/`.
+
+## Round 3 — approval, quiet endings and shorter delivery
+
+The user judged the revised default readings much better. A native Greek
+speaker, as reported by the user, judged the default normalized Modern
+WaveNet reading accurate. This supersedes the previous mixed-pronunciation
+report for that reading, without establishing results for the Chirp or
+phonetic-spelling alternatives. The user reported that some Erasmian word
+endings tailed off too quietly, and requested only the first sentence because
+the longer paused clips were too long for presentation.
+
+The reviewed two-sentence defaults and pre-review reports are preserved in
+`output/round-2/reviewed-defaults/`. Current defaults select the 17-word
+enunciation, retain rate 0.72 and three 0.65-second phrase pauses, and last
+**14.364 seconds Erasmian** and **10.317 seconds Modern Greek**. The delivered
+Modern WAV is a lossless PCM excerpt of the approved performance; the longer
+source and the excerpt agree sample for sample. No new Modern pronunciation,
+pace or volume settings were introduced.
+
+A diagnostic Google render with 17 word-mark timestamps matches the reviewed
+Erasmian first sentence exactly after its saved export gain. Energy in the
+last 200 ms of active endings drops noticeably: the final `συστήσασθαι`
+ending is about 11 dB below its stronger region. These windows include
+natural consonant and stress effects, so they do not imply a pronunciation
+error or prove that every quiet word is problematic.
+
+Gentle 2:1 compression at -24 dBFS with +6 dB makeup and a compensated peak
+limiter raises the endings without stretching or resynthesizing phonemes:
+
+| Ending | Original RMS | Leveled RMS | Change |
+| --- | ---: | ---: | ---: |
+| εὐθείᾳ | -25.8 dBFS | -21.5 dBFS | +4.3 dB |
+| εὐθυγράμμῳ | -24.5 dBFS | -20.8 dBFS | +3.6 dB |
+| συστήσασθαι | -31.8 dBFS | -25.1 dBFS | +6.7 dB |
+
+The comparisons use identical timestamped windows. Detailed measurements and
+audio fingerprints are in `output/erasmian-level-check.json`. Modern Greek
+does not receive this processing. Twenty-seven automated tests pass,
+including quiet-region audibility, preserved silent gaps and frame counts,
+clipping headroom and retention of original overload evidence. Listening
+approval of the new Erasmian volume adjustment remains pending.

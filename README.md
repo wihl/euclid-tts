@@ -12,12 +12,18 @@ and a native Greek listener found the Modern reading unclear and mixed.
 Feedback is recorded in `EXPERIMENTS.md`; original samples and pre-review
 reports are preserved in `output/round-1/`.
 
-Revised defaults try **Google `en-US-Wavenet-F` with word-level Erasmian IPA**
-(54.16 seconds) and **`el-GR-Wavenet-B` with Modern normalized text** (38.75
-seconds). Both use synthesis rate 0.72 and grammatical pauses. Slower Kokoro,
-slower Greek Chirp and a Modern phonetic-spelling trial are also saved in
-`output/round-2/`. Improved accuracy and naturalness remain unverified by
-listening. Measurements and links are in `output/model-comparison.md`.
+The user judged the revised readings much better, and a native Greek speaker
+found the default Modern WaveNet reading accurate. The user noted quiet
+Erasmian word endings and requested shorter, one-sentence clips.
+
+Current defaults are **Google `en-US-Wavenet-F` with word-level Erasmian IPA
+and gentle volume leveling** (14.36 seconds) and **`el-GR-Wavenet-B` with
+Modern normalized text** (10.32 seconds). Both retain synthesis rate 0.72
+and three phrase pauses. The delivered Modern WAV is a lossless excerpt of
+the approved performance. The new Erasmian volume adjustment awaits review.
+The longer reference files are in `output/round-2/reviewed-defaults/`;
+Kokoro, Chirp and a Modern phonetic-spelling trial remain in `output/round-2/`.
+Measurements and links are in `output/final-report.md` and `model-comparison.md`.
 
 Google authentication, billing and API enablement are set up on the original
 machine. Fresh installations need the setup below; no credentials are in
@@ -51,13 +57,14 @@ This is the on-disk course edition, not the separately assigned Books 1–4
 volume. The course Shiny app was identified from the project brief but its
 text was not independently compared.
 
-The default is the **first two complete sentences**, 65 source word/label
-tokens. The raised dot after ΔΓΕ is an internal pause, so the second sentence
-includes both the setting-out and the specification. The passage is:
+The default is the **first complete sentence**, the enunciation, with 17
+source words in four grammatical breath groups. The selected passage is:
 
 > Πρὸς τῇ δοθείσῃ εὐθείᾳ καὶ τῷ πρὸς αὐτῇ σημείῳ τῇ δοθείσῃ γωνίᾳ εὐθυγράμμῳ ἴσην γωνίαν εὐθύγραμμον συστήσασθαι.
->
-> Ἔστω ἡ μὲν δοθεῖσα εὐθεῖα ἡ ΑΒ, τὸ δὲ πρὸς αὐτῇ σημεῖον τὸ Α, ἡ δὲ δοθεῖσα γωνία εὐθύγραμμος ἡ ὑπὸ ΔΓΕ· δεῖ δὴ πρὸς τῇ δοθείσῃ εὐθείᾳ τῇ ΑΒ καὶ τῷ πρὸς αὐτῇ σημείῳ τῷ Α τῇ δοθείσῃ γωνίᾳ εὐθυγράμμῳ τῇ ὑπὸ ΔΓΕ ἴσην γωνίαν εὐθύγραμμον συστήσασθαι.
+
+`--sentences 2` remains available for the former 65-token selection. Its raised
+dot after ΔΓΕ is an internal pause, so the second sentence includes both the
+setting-out and the specification. The complete source text is preserved.
 
 Changing the selection never edits the input. Modern normalization and the
 Erasmian phonemes are recorded separately in output JSON files.
@@ -92,10 +99,10 @@ uv run python -m euclid_tts build --voice erasmian
 uv run python -m euclid_tts build --voice modern_female
 ```
 
-Render one sentence or override synthesis speed:
+Request two sentences or override synthesis speed:
 
 ```bash
-uv run python -m euclid_tts build --sentences 1
+uv run python -m euclid_tts build --sentences 2 --output-dir work/two-sentences
 uv run python -m euclid_tts build --voice erasmian --sentences 1 --rate 0.82 --output-dir work/slower
 uv run python -m euclid_tts qc
 ```
@@ -117,7 +124,8 @@ An alternative configuration can be used with
 
 ## Follow-up comparisons and pauses
 
-Regenerate all five revised full samples, five short controls and reports:
+Regenerate the historical five full samples and five short controls, then
+build the current one-sentence defaults and reports:
 
 ```bash
 uv run python tools/round_two.py
@@ -134,8 +142,9 @@ uv run python -m euclid_tts --config experiments/short/round-2-modern-wavenet.ya
 
 Full recipes use rate 0.72; short controls use 0.82 and shorter pauses.
 Both sets have saved configurations. Cloud output can vary between calls.
-Eleven reviewed breath groups preserve every word and label. The full
-opening has ten planned gaps totaling 8.05 seconds, with no final gap:
+The current opening sentence has four breath groups and three gaps totaling
+1.95 seconds. Historical two-sentence samples have eleven groups and ten
+gaps totaling 8.05 seconds. Both preserve all selected words and labels:
 
 ```yaml
 speech:
@@ -153,6 +162,25 @@ requests. Kokoro renders breath groups separated by PCM silence. Engine
 silence can add to the settings; decoded pause measurements are recorded.
 The optional macOS fallback uses native punctuation rather than these explicit
 pause controls. Defaults require Google so fallback cannot replace the trials.
+
+## Erasmian word-ending volume
+
+Word-mark timestamps from Google locate the retained sentence's words.
+The diagnostic waveform matches the reviewed Erasmian first sentence after
+applying its saved export gain. The last 200 ms of the final active word
+region drops about 11 dB below the stronger part of `συστήσασθαι`.
+Some soft consonants and unstressed syllables are naturally quieter; these
+measurements support the user's report without diagnosing a pronunciation error.
+
+`voices.erasmian.level_speech: true` applies gentle 2:1 compression above
+-24 dBFS, +6 dB makeup gain and a peak limiter. Measured ending RMS increases
+are +4.3 dB for `εὐθείᾳ`, +3.6 dB for `εὐθυγράμμῳ`, and +6.7 dB for
+`συστήσασθαι`. Processing preserves the sample count and pause timing;
+WAV/MP3 exports have no clipping. The stronger Erasmian endings need another
+listening pass. Set the flag to `false` to compare the untreated reading.
+Modern Greek receives no volume leveling. The exact filter, source overloads
+and export measurements are saved in voice metadata; word windows and file
+fingerprints are in `output/erasmian-level-check.json`.
 
 ## Pronunciation conventions and evidence
 
@@ -373,10 +401,11 @@ blend ευ poorly, or give unfamiliar Greek an English rhythm. Its successful
 phoneme encoding is evidence about input control, not a listening verdict.
 
 The first review identified pacing and mixed pronunciation as problems.
-Revised comparisons address pacing and test explicit pronunciation input
-with alternative engines. A native-speaker review should identify remaining
-wrong vowels, stress or unclear words. Ancient wording still sounds archaic
-with Modern sounds; translating it would be a separate task. Further
+The later native-speaker review judged the default Modern WaveNet reading
+accurate; that supersedes the earlier negative report for this voice/input.
+The user found the Erasmian improved but noted quiet endings, addressed by
+the new leveling. Current clips use one sentence. Ancient wording remains
+unchanged, and other Modern variants have no reported review. Further
 individual classroom conventions need documented examples. No training or
 broad phonology engine is involved.
 
