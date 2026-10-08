@@ -1,7 +1,4 @@
-import copy
 import hashlib
-import json
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -59,6 +56,7 @@ def test_modern_normalization_and_geometry():
     assert modern("Ἔστω τῇ δοθείσῃ εὐθείᾳ") == "Έστω τή δοθείση ευθεία"
     assert modern("ἡ ὑπὸ ΑΒ ΔΓΕ") == "η υπό άλφα βήτα δέλτα γάμμα έψιλον"
     assert modern("ῥ ἁ ἀ ῳ ϊ ΐ") == "ρ α α ω ϊ ΐ"
+    assert modern("ΔΓΕ· δεῖ δὴ") == "δέλτα γάμμα έψιλον, δεί δή"
 
 
 @pytest.mark.parametrize("section,key,value", [
@@ -97,6 +95,7 @@ def test_pcm_mp3_integrity_and_silence_detection(tmp_path):
     assert wav["leading_silence_seconds"] <= 0.121
     mp3 = audio.inspect(audio.export_mp3(path))
     assert mp3["codec"] == "mp3" and mp3["decode_ok"]
+    assert mp3["clipped_samples"] == 0
 
 
 def test_overloads_and_bad_audio_are_not_hidden(tmp_path):

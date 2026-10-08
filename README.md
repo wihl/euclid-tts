@@ -7,6 +7,11 @@ experiment for MATH E-139, taught by Graeme Bird. All code and phonetic
 transcriptions were prepared with AI assistance. No professor's voice is
 cloned, adapted, or used to train a model.
 
+The completed run generated both voices: Kokoro `af_heart` and Google Cloud
+`el-GR-Chirp3-HD-Aoede`. Google authentication, billing and API enablement are
+set up. The earlier Melina female fallback is retained as a local backup.
+Exact durations, measured runtime and limitations are in `output/final-report.md`.
+
 The Erasmian output uses the small Apache-2.0
 [Kokoro ONNX model](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX),
 with manually specified phonemes and its stock American female `af_heart`
@@ -138,7 +143,8 @@ the model vocabulary. Greek letter groups ΑΒ and ΔΓΕ are expanded to
 individual Greek letter names. The two final modes read the same selection.
 
 Modern normalization maps acute/grave/circumflex to tonos, removes breathings
-and iota subscripts, keeps diaeresis, and expands labels. It retains Ancient
+and iota subscripts, keeps diaeresis, and expands labels. Raised dots become
+commas for pauses: a semicolon would be a Greek question mark. It retains Ancient
 Greek words and inflections: this is their pronunciation with Modern Greek
 sounds, not a Modern Greek translation. Monosyllables may retain a tonos
 that modern orthography would omit.
@@ -274,6 +280,19 @@ Output reports include duration, sample format, clipping, RMS/peak levels,
 leading/trailing silence, internal pauses, and the exact selected text. WAV
 export preserves 120 ms around audible edges. It attenuates only when needed,
 and reports any overload in the original generated samples.
+
+The local run also verified Melina's female gender and `el-GR` locale using
+Apple's voice metadata. If Swift is installed, that discovery can be repeated:
+
+```bash
+swift -module-cache-path .cache/swift-modules tools/voice_info.swift
+```
+
+Saved final, test, slower and backup WAV/MP3 files were fully decoded.
+The measured completion report is `output/final-report.md`; the full decode
+record is `output/all-audio-integrity.json`. `PROGRESS.md` records the completed
+Cloud setup and saved outputs. The final report can be refreshed after the
+standard and slower builds with `uv run python tools/final_report.py`.
 
 No automated check proves subjective naturalness, historical accuracy or
 complete word coverage. A human listening pass is required before presenting

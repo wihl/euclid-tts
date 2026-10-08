@@ -9,11 +9,18 @@ locally in `/Users/wihl/Projects/codex/euclid-tts`. No course files were modifie
 - Native ARM64 Python 3.12.11 environment, `pyproject.toml`, `uv.lock`.
 - Configurable one/two/full sentences and synthesis rate.
 - Default Erasmian sample: Kokoro q8, stock `af_heart`, 30.003 seconds.
-- Default Modern Greek female sample: installed macOS Melina, 25.029 seconds.
+- Default Modern Greek female sample: Google Cloud Chirp 3 HD Aoede, 27.640 seconds.
+- Original Melina fallback preserved in `work/melina-baseline/`.
 - Both modes: `output/euclid-I23-*.wav` and `output/euclid-I23-*.mp3`.
 - Test clips: `output/bakeoff/af_heart.*`, `af_bella.*`, `macos.*`.
 - Measurements: `output/model-comparison.md`, `output/qc-report.md`, and JSON.
 - Sixteen automated tests pass. PCM/MP3 decode and clipping checks pass.
+- All eighteen saved WAV/MP3 files (final, bake-off, slower and backup) decode correctly with zero clipping.
+- Modern female voice and Greek locale verified with macOS voice metadata.
+- The full cropped Greek source column agrees with the saved input after
+  documented typographic and whitespace normalization.
+- Slower synthesis at 0.85 tested: one sentence takes 8.791 seconds.
+- Final measured outcome: `output/final-report.md`.
 - Installation, pronunciation choices, cloud setup and Slides instructions:
   `README.md`.
 
@@ -24,20 +31,11 @@ or modern-phonology substitution is claimed.
 
 ## Google Cloud status
 
-The user refreshed ADC with `gcloud auth application-default login`.
-Authentication now succeeds, but the TTS API responds with
-`403 PERMISSION_DENIED`, reason **SERVICE_DISABLED**, for the ADC quota
-project `gemini-quick-start`. The suggested user-run command is:
-
-```bash
-gcloud services enable texttospeech.googleapis.com --project=gemini-quick-start
-```
-
-Billing may need to be linked in that project. No project/billing/credential
-settings were changed by this program. No secrets are in the reports.
-The preferred configured female voice is `el-GR-Chirp3-HD-Aoede`, confirmed
-in Google's current documentation; the live inventory is checked at runtime.
-Once enabled, regenerate the Modern Greek audio with:
+**Resolved.** The user refreshed ADC, linked billing, and enabled the
+Cloud Text-to-Speech API in `gemini-quick-start`. The live inventory confirms
+`el-GR-Chirp3-HD-Aoede` is female. Both a short test and the full selected
+passage have been rendered successfully with that voice. No additional
+credential or setup is needed for the current project.
 
 ```bash
 export UV_CACHE_DIR="$PWD/.cache/uv"
@@ -45,8 +43,8 @@ uv run python -m euclid_tts voices
 uv run python -m euclid_tts build --voice modern_female
 ```
 
-Under `backend: auto`, a Google failure falls back to Melina and records
-the reason in the voice JSON. Set `backend: google_cloud` to require Google.
+The early RefreshError and SERVICE_DISABLED diagnostics are historical.
+Current final audio uses Google, with the previous local fallback saved.
 
 ## Reproduce the local experiment
 
@@ -63,8 +61,11 @@ run now works without model network access. Source bytes are never changed.
 Downloaded models, output audio and scratch files are excluded from Git
 but remain on disk. Nothing has been uploaded to Google Drive or the deck.
 
-## Finishing checks
+## Final verification
 
-Before final handoff: verify slower synthesis and source-column equivalence,
-finish the measured report, and try Google once more if the API becomes
-available. The local samples are already usable for listening review.
+Source preservation, ARM64 environment, sentence selection, slower local
+synthesis and audio integrity are verified. The Google slower-rate check
+passed (11.754 seconds for one sentence at 0.85), and final reports are saved.
+The complete default build command was tested successfully. No user input is needed. A human
+listening pass remains useful before presenting the experimental Erasmian
+pronunciation; objective file checks do not establish naturalness.

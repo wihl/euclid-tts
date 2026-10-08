@@ -136,4 +136,10 @@ def melina_render(text: str, rate: float, target: Path) -> tuple[np.ndarray, dic
     except subprocess.CalledProcessError as exc:
         raise BackendError(f"macOS Melina synthesis failed (exit {exc.returncode})") from None
     data, _ = audio.read_wav(target)
-    return data, {"backend": "macos", "voice": "Melina", "locale": "el_GR", "gender": "female (macOS stock voice)", "normalized_text": normalized, "words_per_minute": round(175*rate)}
+    meta = {"backend": "macos", "voice": "Melina", "locale": "el_GR", "gender": "female (macOS stock voice)", "normalized_text": normalized, "words_per_minute": round(175*rate)}
+    evidence = ROOT/"work/macos-voices.json"
+    if evidence.exists():
+        voices = json.loads(evidence.read_text())
+        if voices and all(v.get("name") == "Melina" and v.get("gender") == "female" and v.get("locale") == "el-GR" for v in voices):
+            meta["voice_gender_verification"] = {"method": "macOS AVSpeechSynthesisVoice metadata via tools/voice_info.swift (saved discovery)", "voices": voices}
+    return data, meta

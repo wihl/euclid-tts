@@ -54,9 +54,12 @@ def inspect(path: Path) -> dict:
     if path.suffix == ".mp3":
         probe = subprocess.run(["ffprobe", "-v", "error", "-show_format", "-show_streams", "-of", "json", str(path)], capture_output=True, text=True, check=True)
         info = json.loads(probe.stdout)
-        # Decode every frame as well as reading the container metadata.
-        subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "null", "-"], check=True)
-        return {"file": path.name, "duration_seconds": float(info["format"]["duration"]), "codec": info["streams"][0]["codec_name"], "decode_ok": True}
+        # Decode all frames to floating-point PCM and check codec overshoots.
+        decoded = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "f32le", "-acodec", "pcm_f32le", "-"], capture_output=True, check=True)
+        samples = np.frombuffer(decoded.stdout, dtype="<f4")
+        if not len(samples) or not np.isfinite(samples).all():
+            raise ValueError("Invalid decoded MP3 samples")
+        return {"file": path.name, "duration_seconds": float(info["format"]["duration"]), "codec": info["streams"][0]["codec_name"], "peak_dbfs": float(20*np.log10(np.max(np.abs(samples)))), "clipped_samples": int(np.count_nonzero(np.abs(samples) >= 1)), "decode_ok": True}
     data, sr = read_wav(path)
     active = np.flatnonzero(np.abs(data) > 0.001)
     if not len(active):

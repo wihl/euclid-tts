@@ -72,4 +72,6 @@ def modern(text: str) -> str:
             output.append("\u0301")  # grave/circumflex become stress (tonos)
         elif not ud.combining(c) or c in "\u0301\u0308":
             output.append(c)  # discard breathings and iota subscript
-    return ud.normalize("NFC", "".join(output)).replace("·", ";").replace("·", ";").replace("᾿", "’")
+    # In Greek, ';' is a question mark. Use a comma for the source's raised
+    # dot so a Modern Greek voice gets a pause without interrogative prosody.
+    return ud.normalize("NFC", "".join(output)).replace("·", ",").replace("·", ",").replace("᾿", "’")

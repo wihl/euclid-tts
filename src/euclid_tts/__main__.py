@@ -104,7 +104,7 @@ def build(cfg, out, voice=None, sentence_count=None):
             files.append(audio.export_mp3(wav))
         meta.update(source_sha256=hashlib.sha256(source_bytes).hexdigest(), selected_greek=selected, selection=passage_cfg, rate=cfg["speech"]["rate"], elapsed_seconds=time.perf_counter()-start, process_max_rss_mib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**2), architecture=platform.machine(), audio=[audio.inspect(p) for p in files])
         save_json(out/f"{VOICE_NAMES[name]}.json", meta)
-        print(f"{name}: {len(data)/audio.SAMPLE_RATE:.2f}s speech → {wav}")
+        print(f"{name}: {meta['audio'][0]['duration_seconds']:.2f}s speech → {wav}")
     qc(out)
 
 
@@ -147,12 +147,15 @@ def bakeoff(cfg, out):
             candidate.update(audio=audio.inspect(wav), status="generated; listening review pending")
         except Exception as exc:
             candidate.update(status="unavailable", error=str(exc) if isinstance(exc, BackendError) else type(exc).__name__)
+        candidate["max_process_rss_mib"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/(1024**2)
         records.append(candidate)
         print(f"{backend}: {candidate['status']}", flush=True)
     save_json(out/"model-comparison.json", {"phrase": TEST_PHRASE, "rate": cfg["speech"]["rate"], "candidates": records})
     lines = ["# Short-phrase comparison", "", f"Greek: {TEST_PHRASE}", "", f"Erasmian IPA-like input: `{erasmian(TEST_PHRASE)}`", "", f"Modern input: {modern(TEST_PHRASE)}", "", "| Candidate | Mode | Status | Duration | Inference |", "| --- | --- | --- | ---: | ---: |"]
     for c in records:
-        lines.append(f"| {c['candidate']} | {c['mode']} | {c['status']} | {c.get('audio', {}).get('duration_seconds', 0):.2f}s | {c.get('inference_seconds', 0):.2f}s |")
+        duration = f"{c['audio']['duration_seconds']:.2f}s" if 'audio' in c else "—"
+        inference = f"{c['inference_seconds']:.2f}s" if 'inference_seconds' in c else "—"
+        lines.append(f"| {c['candidate']} | {c['mode']} | {c['status']} | {duration} | {inference} |")
     lines += ["", "Measured timings and input tokens are in model-comparison.json. Inference excludes local model loading. Memory is a process high-water mark, not isolated per candidate. Local calls have no API charge; Google cost depends on the account's monthly allowance.", "", "Kokoro accepts every phoneme token without filtering; its English voice is being tested outside its training language. Generated audio is experimental. Naturalness and complete word coverage require listening. Automated integrity checks do not establish pronunciation accuracy.", "", "Known compromises: English rhotic /ɹ/, non-native /ɛʊ/ for ευ, and unstressed English vowel reduction. No professor's voice is used."]
     (out/"model-comparison.md").write_text("\n".join(lines)+"\n", encoding="utf-8")
 
@@ -165,9 +168,8 @@ def qc(out):
         if not metadata_file.exists():
             continue
         meta = json.loads(metadata_file.read_text())
-        checks = [audio.inspect(out/f"{name}.wav")]
-        if (out/f"{name}.mp3").exists():
-            checks.append(audio.inspect(out/f"{name}.mp3"))
+        # Check the current build's files, not older exports left in the folder.
+        checks = [audio.inspect(out/c["file"]) for c in meta["audio"]]
         records.append({"voice": name, "checks": checks})
         lines += [f"## {name}", "", f"Backend: {meta['backend']}; voice: {meta['voice']}; rate: {meta['rate']}.", "", "Greek passage:", "", meta["selected_greek"], "", "| File | Duration | Decode | Peak | Clipped samples |", "| --- | ---: | --- | ---: | ---: |"]
         for c in checks:
@@ -175,6 +177,10 @@ def qc(out):
             lines.append(f"| {c['file']} | {c['duration_seconds']:.3f}s | OK | {peak} | {c.get('clipped_samples', '—')} |")
         wav = checks[0]
         lines += ["", f"Edge silence: {wav['leading_silence_seconds']:.3f}s / {wav['trailing_silence_seconds']:.3f}s. Internal pauses ≥300 ms: {wav['internal_silences_over_300ms']}.", f"Raw overload samples before export: {meta['raw_overload_samples']}. Source SHA-256: `{meta['source_sha256']}`.", ""]
+        if meta["backend"] == "kokoro":
+            lines += ["Pronunciation input: every token was encoded without dropping symbols; stress marks, rough breathings, diphthongs and letter names are in the recorded phoneme strings. This establishes input control. Their realization in the audio and subjective naturalness still need listening.", ""]
+        if "voice_gender_verification" in meta:
+            lines += ["Female voice and Greek locale independently confirmed using macOS AVSpeechSynthesisVoice metadata; both installed Melina identifiers report female and el-GR.", ""]
     save_json(out/"qc-report.json", records)
     (out/"qc-report.md").write_text("\n".join(lines)+"\n", encoding="utf-8")
 
