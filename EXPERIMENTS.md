@@ -93,7 +93,7 @@ The comparisons use identical timestamped windows. Detailed measurements and
 audio fingerprints are in `output/erasmian-level-check.json`. Modern Greek
 does not receive this processing. Twenty-seven automated tests pass,
 including quiet-region audibility, preserved silent gaps and frame counts,
-clipping headroom and retention of original overload evidence. Listening
+clipping headroom and retention of original overload evidence.
 The user subsequently confirmed that the Erasmian drop-off is gone. Its
 remaining issue is a synthesized overall tone, compared with Modern Greek.
 
@@ -121,4 +121,72 @@ JSON and QC are in `output/round-4/`; recipes are in the two
 `experiments/round-4-erasmian-*.yaml` files. The comparison report is
 `output/naturalness-comparison.md`. Twenty-nine automated tests pass,
 including whole-sentence style scope and preservation of the exact phoneme
-word sequence. No subjective winner is claimed for these new trials.
+word sequence. At generation time no subjective winner was claimed.
+
+### Round-4 listening verdict
+
+The user subsequently rejected **Chirp Leda** as terrible and worse than the
+preceding iteration. **Neural2 lively** was not too bad overall, but its
+words were slurred and poorly enunciated. These are human results; passing
+audio-integrity checks did not establish clarity. Neither is promoted.
+
+## Round 5 — course convention audit, then naturalness
+
+The user identified that the Erasmian table lacked the course handout's
+written convention. Read-only review covered `GreekAlphabetSequence.pdf`
+pp. 1–2 (alphabet), **p. 4** (the diphthong line in this copy), the class-3
+study note's “Class pronunciation” bullet, and its cited class-3 / class-2
+lecture remarks. The notes override the handout where they differ; no
+course file or source Greek was modified and no recording was used.
+
+The audit changed 28 finite word entries and one letter-name entry. README's
+pronunciation table gives one row per divergence, citing page/timestamp.
+`input/pronunciation-source.json` preserves relative source locators, file
+hashes, before/after transcriptions and explicit unresolved choices.
+
+- ευ: /ɛʊ/ → /juː/, handout *feud*, p. 4.
+- Standalone υ: /ʊ/ → target /y/, French u / German ü, p. 2. Google en-US
+  lacks it: selected rounded high-vowel substitute /uː/ loses frontness.
+- Accented ι: /ɪ/ → /iː/, *machine*, p. 2; unaccented ι remains *bit* /ɪ/.
+- χ: lexicon target /k/ → /x/, *loch/Bach*, p. 2. Google still receives /k/
+  as an explicit same-place substitute that loses frication. χ is not in
+  the retained first sentence. Kokoro's pinned vocabulary accepts /y x/
+  unchanged, but its American voice's realization has no listening verdict.
+- ο: select unmerged American *off* /ɔ/, pp. 1–2, distinguishing α /ɑ/.
+  The handout does not specify an English dialect; this is an explicit
+  interpretation choice. Ε's expanded epsilon name changes accordingly.
+- English /ɹ/ is now recognized as agreeing with *run*, p. 2, rather than
+  being an unsupported substitute. Its sound is unchanged.
+
+Retained classroom conventions: silent subscript in τῷ (class 3 `01:03:00`
+and `01:18:52`), δέ/δή alike (`01:05:36`; /ɛ/ still a selected shared quality),
+delta /d/ (handout *done*, p. 1; class 3 `01:30:12`), rough h in ὅπερ
+(`01:32:20`), and ου /uː/ (class 2 `00:45:00`, handout *soup*, p. 4).
+αυ /aʊ/ remains explicitly unresolved because these sources do not specify it.
+
+The corrected default was regenerated **before** the naturalness trials:
+WaveNet-F, **14.35275 seconds**, one sentence, existing rate/pauses/leveling.
+All 31 tests passed. The preceding Erasmian delivery and reports are saved
+in `output/round-5/pre-correction/`. Earlier ending-volume measurements
+describe that archived waveform; they are not reused as new measurements.
+Modern Greek remains the approved, sample-identical 10.317-second excerpt.
+
+| Corrected trial | Purpose | Duration | Result |
+| --- | --- | ---: | --- |
+| Neural2-F neutral | Remove lively style | 14.353 s | WAV bytes and PCM identical to corrected WaveNet default; no new audition |
+| Neural2-F firm | Change full-sentence style while keeping voice/input/pacing | 14.578 s | Distinct waveform, human review pending |
+| Neural2-H neutral | Change the verified female stock voice | 12.830 s | Distinct waveform, human review pending |
+
+The neutral duplication is observed for this request; it does not prove the
+services always use the same model. Google accepted all 17 word-phoneme tags
+in each new trial. Both audible alternatives keep the corrected course and
+engine IPA, rate 0.72, three 0.65-second pauses and leveling. No time stretch,
+new model download, cloning or training was used. The firm style follows
+Google's documented whole-sentence extension. New recipes are in
+`experiments/round-5-erasmian-*.yaml`; links and hashes are in
+`output/naturalness-comparison.md` and its JSON.
+
+Human listening must still check actual /juː/ and /iː/, vowel separation in
+γωνίᾳ/γωνίαν, consonant clarity, audible endings and natural connected rhythm.
+The English /uː/ and /k/ substitutes cannot establish exact /y/ and /x/.
+Passing file and SSML checks is not a pronunciation or naturalness verdict.

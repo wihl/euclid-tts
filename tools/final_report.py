@@ -201,52 +201,74 @@ def main():
             "is changed by that processing. WAV and MP3 decode without clipping. Detailed word windows "
             "are saved in `erasmian-level-check.json`. The user confirmed that the adjusted Erasmian "
             "no longer tails off, though its overall tone remains less natural than Modern Greek."]
-    naturalness = []
-    for candidate_name in ["neural2-lively", "chirp-leda"]:
-        folder = OUT/"round-4"/candidate_name
+    historical = []
+    reviews = {"neural2-lively": "Somewhat better, but slurred and poorly enunciated", "chirp-leda": "Rejected: worse than the previous iteration"}
+    for name, review in reviews.items():
+        folder = OUT/"round-4"/name
         if folder.exists():
-            naturalness.append(record(candidate_name, folder))
-    if naturalness:
-        natural_lines = ["# Erasmian naturalness trials", "",
-            "The user confirmed that leveling resolved the drop-off, but finds the WaveNet Erasmian "
-            "tone synthesized compared with Modern Greek. These alternatives test voice/model "
-            "prosody with the same one-sentence passage, phoneme targets, rate 0.72, three 0.65-second "
-            "phrase pauses and gentle leveling. Generated audio is ready for comparison; no listening "
-            "winner or new pronunciation-accuracy verdict is claimed.", "",
-            "| Candidate | Voice | Style | Duration | Build/export | MP3 |",
-            "| --- | --- | --- | ---: | ---: | --- |",
-            f"| Current reference | {e['voice']} | Default | {e['audio'][0]['duration_seconds']:.3f}s | — | [listen](euclid-I23-erasmian.mp3) |"]
-        for c in naturalness:
+            historical.append({**record(name, folder), "human_review": review, "convention": "pre-course-audit"})
+    naturalness = []
+    reference_hash = hashlib.sha256((OUT/"euclid-I23-erasmian.wav").read_bytes()).hexdigest()
+    for name in ["neural2-neutral", "neural2-firm", "neural2-h"]:
+        folder = OUT/"round-5"/name
+        if (folder/"euclid-I23-erasmian.json").exists():
+            c = record(name, folder)
             assert c["selected_greek"] == e["selected_greek"]
-            assert c["ipa"] == e["ipa"]
+            assert c["ipa"] == e["ipa"] and c["engine_ipa"] == e["engine_ipa"]
+            assert c["pronunciation_convention"] == e["pronunciation_convention"]
+            assert c["rate"] == e["rate"] and c["pauses"] == e["pauses"]
             assert c["leveling"]["filter"] == e["leveling"]["filter"]
-            natural_lines.append(f"| {c['candidate']} | {c['voice']} | {c.get('expressive_style') or 'Default'} | {c['audio'][0]['duration_seconds']:.3f}s | {c['elapsed_seconds']:.2f}s | [listen](round-4/{c['candidate']}/euclid-I23-erasmian.mp3) |")
-        natural_lines += ["", "The live inventory verified both voices as FEMALE/en-US; services accepted "
-            "the word-level IPA and pause markup. Neural2 wraps its complete sentence in Google's "
-            "documented `google:style` extension. That style and Chirp's SSML support are currently "
-            "preview features. All four new WAV/MP3 files decode without clipping. Request acceptance "
-            "does not establish the spoken phoneme realization.", "",
-            "Neural2 is the first comparison to audition: it introduces an expressive style while "
-            "staying near the reference duration. Chirp tests a different model and has longer measured "
-            "pauses despite the same requested settings. Its waveform remains active at the file end, "
-            "so check the final συστήσασθαι for a complete, natural ending during playback.", "",
-            "```bash",
-            "uv run python -m euclid_tts --config experiments/round-4-erasmian-neural2-lively.yaml build",
-            "uv run python -m euclid_tts --config experiments/round-4-erasmian-chirp-leda.yaml build",
-            "```", "",
-            "Listen for natural connected speech, accurate stress and the intended Erasmian /eɪ/ "
-            "rather than Modern /i/, /ɛʊ/ rather than /ef/, and consonant /d/ rather than /ð/. "
-            "These English voices still read a manually specified Ancient vocabulary outside their "
-            "ordinary English context; naturalness can remain limited. An explanation attributing "
-            "the stiffness to that mismatch is an inference, not an established diagnosis.", "",
-            "[Google Neural2 expressive styles](https://docs.cloud.google.com/text-to-speech/docs/ssml#styles), "
-            "[Chirp SSML and voice controls](https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd)."]
-        write("naturalness-comparison.md", natural_lines)
-        (OUT/"naturalness-comparison.json").write_text(json.dumps({"candidates": naturalness, "human_review": "pending"}, ensure_ascii=False, indent=2)+"\n")
-        final += ["", "## Further naturalness trials", "",
-            "Separate [Neural2 lively and Chirp Leda samples](naturalness-comparison.md) test more "
-            "expressive delivery. The current defaults remain the user-reviewed WaveNet pair; no "
-            "unreviewed alternative was promoted."]
+            c["wav_sha256"] = hashlib.sha256((folder/"euclid-I23-erasmian.wav").read_bytes()).hexdigest()
+            c["identical_wav_to_default"] = c["wav_sha256"] == reference_hash
+            c["human_review"] = "No distinct comparison: byte-identical to current default" if c["identical_wav_to_default"] else "Pending"
+            naturalness.append(c)
+    natural_lines = ["# Erasmian naturalness and enunciation trials", "",
+        "The current default and all round-5 candidates use the course-reconciled targets, rate 0.72, "
+        "three 0.65-second phrase pauses and the same gentle leveling. The corrected default was "
+        "regenerated and 31 tests passed before these additional trials. No new human verdict is claimed.", "",
+        "| Candidate | Voice | Style | WAV duration | Result | MP3 |",
+        "| --- | --- | --- | ---: | --- | --- |",
+        f"| Corrected reference | {e['voice']} | Default | {e['audio'][0]['duration_seconds']:.3f}s | Awaiting review | [listen](euclid-I23-erasmian.mp3) |"]
+    for c in naturalness:
+        natural_lines.append(f"| {c['candidate']} | {c['voice']} | {c.get('expressive_style') or 'Neutral'} | {c['audio'][0]['duration_seconds']:.3f}s | {c['human_review']} | [listen](round-5/{c['candidate']}/euclid-I23-erasmian.mp3) |")
+    natural_lines += ["",
+        "Neural2-F neutral returned the exact same WAV bytes and PCM as WaveNet-F, despite the "
+        "different requested voice name. This is an observed result for this request, not proof "
+        "that the services always share a model. It adds no separate listening candidate. "
+        "Firm delivery changes only full-sentence style relative to neutral F, seeking stronger "
+        "enunciation without the rejected lively delivery. Neural2-H changes the stock female "
+        "voice with neutral style. Both are distinct waveforms, but improved clarity is unverified.", "",
+        "Live inventories confirmed FEMALE/en-US; services accepted all 17 word-phoneme tags. "
+        "The firm style uses Google's documented full-sentence preview extension. No time stretch, "
+        "training, cloning, source edits or Modern rerender was performed. WAV/MP3 checks pass; "
+        "encoding and request acceptance do not establish audible word completeness.", "",
+        "Listen for the /j/ in ευ, machine-like /iː/ in γωνίᾳ and ἴσην, clear vowel separation "
+        "in γωνίᾳ/γωνίαν, audible endings and natural rhythm through συστήσασθαι. Standalone υ "
+        "is still an English /uː/ approximation to /y/. χ is absent here: a longer-word check "
+        "would be needed to hear its /k/ substitution. Accurate stress, connected speech and "
+        "acceptability of these substitutes require the user's classroom listening review.", "",
+        "## Recorded round-4 feedback (old lexicon)", "",
+        "| Candidate | User verdict | MP3 |", "| --- | --- | --- |"]
+    for c in historical:
+        natural_lines.append(f"| {c['candidate']} | {c['human_review']} | [archive](round-4/{c['candidate']}/euclid-I23-erasmian.mp3) |")
+    natural_lines += ["", "These historical samples use different phoneme targets and are retained as "
+        "failed comparisons. They are not controls for the corrected default. The earlier reviewed "
+        "WaveNet and pre-audit reports are preserved in `round-5/pre-correction/`.", "",
+        "```bash", "uv run python -m euclid_tts build --voice erasmian",
+        "uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-firm.yaml build",
+        "uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-h.yaml build",
+        "uv run python tools/final_report.py", "```", "",
+        "[Google Neural2 expressive styles](https://docs.cloud.google.com/text-to-speech/docs/ssml#styles), "
+        "[Documented English IPA inventory](https://docs.cloud.google.com/text-to-speech/docs/phonemes)."]
+    write("naturalness-comparison.md", natural_lines)
+    (OUT/"naturalness-comparison.json").write_text(json.dumps({"reference_wav_sha256": reference_hash,
+        "pronunciation_convention": e["pronunciation_convention"], "candidates": naturalness,
+        "historical_candidates": historical, "human_review_of_corrected_samples": "pending"}, ensure_ascii=False, indent=2)+"\n")
+    final += ["", "## Further naturalness trials", "",
+        "[Neural2 firm and neutral H samples](naturalness-comparison.md) test delivery and a different "
+        "stock voice after the pronunciation correction. Neural2-F neutral was byte-identical to "
+        "the corrected WaveNet reference. Chirp Leda and lively Neural2 are recorded as rejected/unclear "
+        "historical trials. The fresh Erasmian samples need human review; Modern remains the approved excerpt."]
     write("final-report.md", final)
     print(f"Saved five full comparisons and five short controls; {len(all_audio)} audio files decode without clipping")
 

@@ -194,15 +194,19 @@ The user rejected round-4 Chirp Leda as worse than the preceding version.
 Neural2 lively was somewhat better but had slurred, poorly enunciated words.
 Both used the old lexicon; their files remain as historical failed comparisons.
 
-After regenerating the corrected WaveNet default, round 5 compares Neural2-F
-with neutral delivery and with full-sentence `firm` style. Both retain the
+After regenerating the corrected WaveNet default (14.353 seconds), round 5
+compares Neural2-F with neutral delivery and full-sentence `firm` style,
+and a different stock female voice, Neural2-H. All retain the
 corrected phonemes, rate 0.72, three 0.65-second phrase pauses and leveling.
-This tests removing lively delivery, then changing only style to seek clearer
-enunciation. Neither candidate has a human verdict or replaces the default.
+This tests removing lively delivery, changing style to seek clearer
+enunciation, and changing the neutral voice. Neural2-F neutral returned the
+**exact same WAV bytes and PCM as the corrected default**, so it adds no
+audition. Firm F is distinct at **14.578 seconds**; neutral H is distinct at
+**12.830 seconds**. Neither has a human verdict or replaces the default.
 
 ```bash
-uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-neutral.yaml build
 uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-firm.yaml build
+uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-h.yaml build
 ```
 
 `output/naturalness-comparison.md` links the alternatives and corrected reference.
