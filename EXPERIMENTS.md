@@ -94,4 +94,31 @@ audio fingerprints are in `output/erasmian-level-check.json`. Modern Greek
 does not receive this processing. Twenty-seven automated tests pass,
 including quiet-region audibility, preserved silent gaps and frame counts,
 clipping headroom and retention of original overload evidence. Listening
-approval of the new Erasmian volume adjustment remains pending.
+The user subsequently confirmed that the Erasmian drop-off is gone. Its
+remaining issue is a synthesized overall tone, compared with Modern Greek.
+
+## Round 4 — bounded naturalness trials
+
+The user asked whether anything else was worth trying. Two additional
+one-sentence Google candidates were actually rendered: **en-US-Neural2-F
+with lively style**, 14.655 seconds, and **en-US-Chirp3-HD-Leda**, 16.943
+seconds. Both use the same 17-word Greek selection, explicit Erasmian IPA,
+rate 0.72, three 0.65-second requested phrase pauses and the existing gentle
+leveling. Live inventories verified the English female voices. No new
+download, training, cloning or Modern pronunciation substitution was used.
+
+Google accepted the full-sentence style markup and phoneme controls. Both
+WAV/MP3 pairs decode without clipping; their naturalness and actual sound
+realization still need listening. The current WaveNet defaults remain in
+place. Neural2 introduces expressive delivery near the reference duration;
+Chirp has longer pauses and an active waveform at EOF, so its final word
+needs particular attention during playback. Attribute any robotic quality
+to unfamiliar phoneme-controlled vocabulary only as an inference, not an
+established cause.
+
+The Neural2 style and Chirp SSML features are documented previews. Audio,
+JSON and QC are in `output/round-4/`; recipes are in the two
+`experiments/round-4-erasmian-*.yaml` files. The comparison report is
+`output/naturalness-comparison.md`. Twenty-nine automated tests pass,
+including whole-sentence style scope and preservation of the exact phoneme
+word sequence. No subjective winner is claimed for these new trials.

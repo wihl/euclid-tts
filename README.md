@@ -16,11 +16,14 @@ The user judged the revised readings much better, and a native Greek speaker
 found the default Modern WaveNet reading accurate. The user noted quiet
 Erasmian word endings and requested shorter, one-sentence clips.
 
-Current defaults are **Google `en-US-Wavenet-F` with word-level Erasmian IPA
-and gentle volume leveling** (14.36 seconds) and **`el-GR-Wavenet-B` with
+Current defaults are **Google `en-US-Wavenet-F` with course-reconciled Erasmian IPA
+and gentle volume leveling** and **`el-GR-Wavenet-B` with
 Modern normalized text** (10.32 seconds). Both retain synthesis rate 0.72
 and three phrase pauses. The delivered Modern WAV is a lossless excerpt of
-the approved performance. The new Erasmian volume adjustment awaits review.
+the approved performance. The user confirmed that the earlier Erasmian drop-off was
+gone, but its tone still sounded less natural than the Modern Greek version.
+The course audit corrected the Erasmian targets; that fresh delivery needs review.
+Chirp Leda was rejected as worse, and Neural2 lively was judged slurred.
 The longer reference files are in `output/round-2/reviewed-defaults/`;
 Kokoro, Chirp and a Modern phonetic-spelling trial remain in `output/round-2/`.
 Measurements and links are in `output/final-report.md` and `model-comparison.md`.
@@ -165,7 +168,7 @@ pause controls. Defaults require Google so fallback cannot replace the trials.
 
 ## Erasmian word-ending volume
 
-Word-mark timestamps from Google locate the retained sentence's words.
+Historical word-mark timestamps from Google locate the pre-correction sentence's words.
 The diagnostic waveform matches the reviewed Erasmian first sentence after
 applying its saved export gain. The last 200 ms of the final active word
 region drops about 11 dB below the stronger part of `συστήσασθαι`.
@@ -176,50 +179,97 @@ measurements support the user's report without diagnosing a pronunciation error.
 -24 dBFS, +6 dB makeup gain and a peak limiter. Measured ending RMS increases
 are +4.3 dB for `εὐθείᾳ`, +3.6 dB for `εὐθυγράμμῳ`, and +6.7 dB for
 `συστήσασθαι`. Processing preserves the sample count and pause timing;
-WAV/MP3 exports have no clipping. The stronger Erasmian endings need another
-listening pass. Set the flag to `false` to compare the untreated reading.
+WAV/MP3 exports have no clipping. The user confirmed that the stronger
+Erasmian endings resolve the drop-off. Set the flag to `false` to compare
+the untreated reading.
 Modern Greek receives no volume leveling. The exact filter, source overloads
 and export measurements are saved in voice metadata; word windows and file
 fingerprints are in `output/erasmian-level-check.json`.
+Those ending measurements describe the archived pre-correction waveform,
+not the fresh course-corrected render. The same leveling remains enabled.
+
+## Further Erasmian naturalness trials
+
+The user rejected round-4 Chirp Leda as worse than the preceding version.
+Neural2 lively was somewhat better but had slurred, poorly enunciated words.
+Both used the old lexicon; their files remain as historical failed comparisons.
+
+After regenerating the corrected WaveNet default, round 5 compares Neural2-F
+with neutral delivery and with full-sentence `firm` style. Both retain the
+corrected phonemes, rate 0.72, three 0.65-second phrase pauses and leveling.
+This tests removing lively delivery, then changing only style to seek clearer
+enunciation. Neither candidate has a human verdict or replaces the default.
+
+```bash
+uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-neutral.yaml build
+uv run python -m euclid_tts --config experiments/round-5-erasmian-neural2-firm.yaml build
+```
+
+`output/naturalness-comparison.md` links the alternatives and corrected reference.
+The [Neural2 expressive-style feature](https://docs.cloud.google.com/text-to-speech/docs/ssml#styles)
+and [Chirp SSML support](https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd)
+are currently preview. Styles are wrapped around a complete sentence; the
+prototype requires `en-US-Neural2-F` and refuses styles on split clauses.
+The phonetic target stays Anglophone Erasmian with stress accent. Expressive
+sentence intonation does not implement historical Greek pitch accent.
 
 ## Pronunciation conventions and evidence
 
-The user's correction establishes **Anglophone Erasmian with stress accent**.
-Course study notes (`coursework/study/greek-01-notes.md`, *Breathings*) support
-rough breathing as initial /h/. The class-3 lecture note (*01:02:16–01:07:30*)
-records τῷ as “tō,” with silent iota subscript, and δέ/δή pronounced alike.
-These are written course-note observations; the recordings were not opened
-and no additional pronunciation was attributed to the professor.
+**The timestamped class remarks override the handout; the handout governs
+where the remarks are silent.** The following locators are relative to the
+external course workspace, which was read without modification:
 
-For unresolved choices, this prototype uses:
+- **H**: `materials/course/greek-resources/GreekAlphabetSequence.pdf`, alphabet
+  pp. 1–2. In this four-page copy, “A few hints for reading Greek” and the
+  diphthong line are on **p. 4**, not p. 2; both text and page images were checked.
+- **S3**: `coursework/study/class-03-greek-notes.md`, “Class pronunciation” bullet.
+- **C3**: `coursework/lectures/2026-class-03/lecture-note.md`, timestamps below.
+- **C2**: `coursework/lectures/2026-class-02/lecture-note.md`, pronunciation at
+  `00:45:00–00:45:23`.
 
-| Feature | Erasmian approximation | Modern Greek target |
-| --- | --- | --- |
-| β, γ, δ | /b ɡ d/ | /v ɣ~ʝ ð/ |
-| θ, φ, χ | /θ f k/ | /θ f x~ç/ |
-| α, ε, ι, ο, υ | /ɑ ɛ ɪ ɑ ʊ/ | /a e i o i/ |
-| η, ω | /eɪ oʊ/ | /i o/ |
-| αι, ει, οι, αυ, ευ, ου | /aɪ eɪ ɔɪ aʊ ɛʊ uː/ | /e i i av~af ev~ef u/ |
-| Rough breathing | /h/, including ἡ and ὑπό | Silent |
-| Iota subscript | Silent, extending the documented τῷ convention | Silent |
-| Accent | Word stress on the accented syllable | Stress (tonos) |
-| Geometry | Greek names with the selected Erasmian sounds | άλφα, βήτα, γάμμα, δέλτα, έψιλον, ζήτα, ήτα |
+The pronunciation table has one row per divergence, including documentation
+errors and explicit engine compromises. `input/pronunciation-source.json`
+records source hashes, locators and all 29 changed word/letter entries.
 
-δέ and δή both use /dɛ/ as a documented prototype exception: their equality
-is in the class note, but the exact vowel quality is not. Omicron and alpha
-merge in this American approximation. English /ɹ/ replaces Greek rho; vowel
-quantity and gemination are not comprehensively represented. /ɛʊ/ is a
-two-phoneme approximation for ευ, and an English-trained model can introduce
-unwanted reduction or prosody. None of those choices is presented as a
-historically reconstructed Attic system or as a complete match to Bird.
+| Feature / divergence | Previous value | Course target and actual engine input | Evidence |
+| --- | --- | --- | --- |
+| ευ | /ɛʊ/ | **/juː/**, the vowel/glide sequence in *feud*, including stressed εύ in ἐπεζεύχθω. Google receives /juː/. | H p. 4, diphthong line |
+| Standalone υ (outside a diphthong) | /ʊ/ | **/y/**, high front rounded German ü / French u. Google en-US lacks /y/: selected nearest rounded high-vowel substitute **/uː/** loses frontness, so this is not exact. Kokoro's pinned vocabulary accepts /y/ directly; stock American-voice realization is unverified. | H p. 2, υ |
+| Accented ι, including grave | /ɪ/ throughout | **/iː/** as in *machine*: γωνίᾳ, γωνίαν, ἴσην, ἴση, ἴσαι, τρίγωνον, εἰσὶν, τρισὶ. Unaccented ι remains /ɪ/ as in *bit*; ει follows its separate diphthong rule. | H p. 2, ι; H p. 4, accented vowel marked |
+| χ | /k/ described as the target | **/x/** as in *loch/Bach* in τυχόντα and ἐπεζεύχθω. Google en-US lacks /x/: selected same-place substitute **/k/** retains velar articulation but loses frication. Its actual input remains /k/ for this explicit engine reason. Kokoro accepts /x/ directly, unverified by ear. χ does not occur in the retained first sentence. | H p. 2, χ |
+| ο versus α | Both /ɑ/, silently merged | Select unmerged American **off /ɔ/** for ο, retaining **father /ɑ/** for α; Google uses /ɔː/ and /ɑː/. The handout does not fix an English dialect, so merged /ɑ/ can also be an American *off*; the chosen distinction is an implementation choice, not an attested Bird vowel. | H p. 1, α; H p. 2, ο |
+| Ε, expanded epsilon label | /ˈɛpsɪlɑn/ | **/ˈɛpsɪlɔn/**; its omicron follows the selected *off* vowel. Α/Β/Γ/Δ/Ζ/Η were checked and remain unchanged: α=father, η=late, ζ=zoo, stop β/γ/δ. | H pp. 1–2; ο p. 2 |
+| ρ described as an English compromise | /ɹ/, previously said to replace a Greek rho | **/ɹ/** is supported by the handout's *run*. Sound unchanged; the claim that it diverges from the course convention is removed. | H p. 2, ρ |
+| δέ / δή versus the handout's ε / η distinction | Both /dɛ/ | Keep both **/dɛ/** because Bird specifies equality. The notes do not transcribe the shared vowel: /ɛ/ remains an explicit selected quality, not a claim of exact recorded pronunciation. Elsewhere η remains /eɪ/ as in *late*. | C3 `01:05:36–01:05:54` overrides H p. 1; S3 |
 
-`pronunciation.py` contains the manually reviewed finite word table. Kokoro
-uses IPA-like tokens `A`, `I`, `O`, `W` for English diphthongs; output JSON
-also contains an expanded IPA display. Every input token is checked against
-the model vocabulary. Google Erasmian wraps each word in an English IPA
-`<phoneme>` tag, adapting /ɑ/ to its documented /ɑː/ symbol without claiming
-Greek quantity. Greek letter groups ΑΒ and ΔΓΕ are expanded to
-individual Greek letter names. The two final modes read the same selection.
+All four flagged features differ at the **course-target** level. χ has no
+change in Google's actual /k/ input because the engine cannot represent its
+specified /x/, not because the old target was correct. Google's documented
+[en-US phoneme inventory](https://docs.cloud.google.com/text-to-speech/docs/phonemes)
+lacks both /y/ and /x/. The substitutes above prioritize height/rounding for
+υ and place for χ; no uniquely closest substitute is established by these
+sources. Metadata exposes `ipa` (course targets), `engine_ipa` (submitted
+sounds), and `phoneme_substitutions` with affected words and reasons.
+
+Other checked conventions already agree: β/γ/δ are /b ɡ d/ (H p. 1;
+C3 `01:30:12` for the delta correction); θ/φ are /θ f/ (H pp. 1–2);
+η/ω are /eɪ oʊ/ (H pp. 1–2); αι/ει/οι are /aɪ eɪ ɔɪ/ (H p. 4).
+ου remains /uː/, matching H p. 4's *soup* and C2 `00:45:00–00:45:23`'s *oo*.
+Rough /h/ is retained (H p. 1; ὅπερ at C3 `01:32:20`, surrounding
+`01:29:50–01:32:25`). τῷ remains /toʊ/, silent subscript, per C3
+`01:03:00–01:03:09` and `01:18:52–01:19:25`; extending this to other
+subscripted inflections is stated explicitly. αυ /aʊ/ remains unresolved:
+the handout's diphthong list omits it and these remarks do not settle it.
+Stress follows the accented syllable, as requested; no historical pitch
+accent, comprehensive quantity or gemination is implemented. The lecture
+recordings were not opened and no speaker voice was imitated.
+
+`LEXICON` and `ERASMIAN_LETTERS` store course targets. Kokoro uses tokens
+`A/I/O/W` for English diphthongs; all tokens, including /y x/, are checked
+against its pinned vocabulary. Google wraps each word and expanded letter
+name in an English IPA `<phoneme>` tag, applying documented approximations
+separately. /ɑː ɔː iː uː/ are English sound/encoding choices, not an assertion
+of Greek vowel quantity. Both final modes preserve the same Greek selection.
 
 Modern normalization maps acute/grave/circumflex to tonos, removes breathings
 and iota subscripts, keeps diaeresis, and expands labels. Raised dots become

@@ -9,8 +9,9 @@ import pytest
 import yaml
 
 from euclid_tts import audio
+from euclid_tts import synthesize
 from euclid_tts.__main__ import VOICE_NAMES, validate
-from euclid_tts.pronunciation import erasmian, erasmian_ssml_words, modern
+from euclid_tts.pronunciation import ERASMIAN_LETTERS, LEXICON, engine_phonemes, erasmian, erasmian_ssml_words, ipa, modern, pronunciation_record
 from euclid_tts.prosody import DEFAULT_PAUSES, phrase_plan
 from euclid_tts.synthesize import google_ssml_batches, kokoro_render
 from euclid_tts.text import ROOT, SOURCE, WORD, select, sentences
@@ -48,14 +49,44 @@ def test_sentence_selection_preserves_setting_out_and_specification():
 
 
 def test_erasmian_contrasts_and_letter_names():
-    assert erasmian("ἡ ὑπὸ") == "hI hʊˈpɑ"
-    assert erasmian("δοθεῖσα") == "dɑˈθIsɑ"
-    assert erasmian("εὐθεῖα").startswith("ɛʊ")
-    assert erasmian("ΑΒ ΔΓΕ") == "ˈɑlfɑ ˈbItɑ ˈdɛltɑ ˈɡɑmɑ ˈɛpsɪlɑn"
+    assert erasmian("ἡ ὑπὸ") == "hI hyˈpɔ"
+    assert erasmian("δοθεῖσα") == "dɔˈθIsɑ"
+    assert erasmian("εὐθεῖα").startswith("juː")
+    assert erasmian("ΑΒ ΔΓΕ") == "ˈɑlfɑ ˈbItɑ ˈdɛltɑ ˈɡɑmɑ ˈɛpsɪlɔn"
     assert erasmian("τῷ") == "tO"
     assert erasmian("δὲ") == erasmian("δὴ")
     with pytest.raises(ValueError, match="Unreviewed"):
         erasmian("ἀνεξέταστον")
+
+
+def test_course_handout_vowels_and_chi_across_the_full_lexicon():
+    # PDF pp. 1–2: eta=late, omega=wrote, stressed iota=machine,
+    # unstressed iota=bit, upsilon=French u, chi=loch; p. 4: eu=feud.
+    assert ipa(erasmian("εὐθείᾳ εὐθυγράμμῳ")) == "juːˈθeɪɑ juːθyˈɡɹɑmoʊ"
+    assert ipa(erasmian("γωνίᾳ ἴσην τρίγωνον εἰσὶν τρισὶ")) == "ɡoʊˈniːɑ ˈiːseɪn ˈtɹiːɡoʊnɔn eɪˈsiːn tɹɪˈsiː"
+    assert ipa(erasmian("βάσις ἔτι τριῶν")) == "ˈbɑsɪs ˈɛtɪ tɹɪˈoʊn"
+    assert ipa(erasmian("τυχόντα ἐπεζεύχθω")) == "tyˈxɔntɑ ɛpɛˈzjuːxθoʊ"
+    assert erasmian("οὖν ὅπερ") == "uːn ˈhɔpɛɹ"  # class 2 00:45; class 3 01:32
+    assert ERASMIAN_LETTERS["Ε"] == "ˈɛpsɪlɔn"
+    assert "ɛʊ" not in " ".join(LEXICON.values())
+    assert "ʊ" not in " ".join(LEXICON.values()).replace("aʊ", "")
+
+
+def test_engine_substitutions_are_explicit_and_do_not_change_course_targets():
+    greek = "ὑπὸ τυχόντα ποιῆσαι"
+    targets = erasmian(greek)
+    submitted = engine_phonemes(targets, "google_cloud")
+    assert submitted == "huːˈpɔː tuːˈkɔːntɑː pɔɪˈeɪsaɪ"
+    assert engine_phonemes(targets, "kokoro") == targets
+    meta = pronunciation_record(greek, "google_cloud")
+    assert meta["ipa"] == ipa(targets)
+    assert meta["engine_ipa"] == submitted
+    assert [(s["course_ipa"], s["engine_ipa"], s["words"]) for s in meta["phoneme_substitutions"]] == [
+        ("y", "uː", ["ὑπὸ", "τυχόντα"]), ("x", "k", ["τυχόντα"]),
+    ]
+    root = ET.fromstring("<speak>"+erasmian_ssml_words(greek)+"</speak>")
+    assert " ".join(p.attrib["ph"] for p in root.iter("phoneme")) == submitted
+    assert erasmian(greek) == targets
 
 
 def test_modern_normalization_and_geometry():
@@ -147,7 +178,7 @@ def test_google_ssml_covers_every_word_and_expanded_letter_once():
         assert len(batch["ssml"].encode("utf-8")) <= 5000
     assert actual == expected
     root = ET.fromstring("<speak>"+erasmian_ssml_words("ἡ ΑΒ & ὑπὸ")+"</speak>")
-    assert [p.attrib["ph"] for p in root.iter("phoneme")] == ["heɪ", "ˈɑːlfɑː", "ˈbeɪtɑː", "hʊˈpɑː"]
+    assert [p.attrib["ph"] for p in root.iter("phoneme")] == ["heɪ", "ˈɑːlfɑː", "ˈbeɪtɑː", "huːˈpɔː"]
     assert "&amp;" in ET.tostring(root, encoding="unicode")
     # Full selection also stays within the real service byte limit.
     for mode in ["erasmian", "modern_female"]:
@@ -229,3 +260,37 @@ def test_current_defaults_use_one_sentence_and_level_only_erasmian():
     cfg["voices"]["erasmian"]["level_speech"] = "true"
     with pytest.raises(ValueError, match="level_speech"):
         validate(cfg)
+
+
+def test_expressive_style_wraps_the_sentence_and_preserves_phoneme_words(monkeypatch):
+    payloads = []
+    def request(session, payload):
+        payloads.append(payload)
+        return np.ones(2400, dtype=np.float32)*0.1
+    monkeypatch.setattr(synthesize, "google_session", lambda: object())
+    monkeypatch.setattr(synthesize, "google_request", request)
+    voices = [{"name": "en-US-Neural2-F", "ssmlGender": "FEMALE", "languageCodes": ["en-US"]}]
+    greek = select(SOURCE.read_text(), sentence_count=1)
+    _, meta = synthesize.google_render(greek, "en-US-Neural2-F", 0.72, voices, mode="erasmian", style="lively")
+    # The documented Google extension uses a proprietary prefix. Rename it
+    # only for ElementTree parsing; the sent request retains google:style.
+    root = ET.fromstring(payloads[0]["input"]["ssml"].replace("google:style", "style"))
+    styles = list(root.iter("style"))
+    assert len(styles) == 1 and styles[0].attrib["name"] == "lively"
+    assert [node.text for node in styles[0].iter("phoneme")] == re.findall(WORD, greek)
+    original = ET.fromstring(google_ssml_batches(phrase_plan(greek), "erasmian")[0]["ssml"])
+    assert [p.attrib["ph"] for p in root.iter("phoneme")] == [p.attrib["ph"] for p in original.iter("phoneme")]
+    assert meta["expressive_style"] == "lively"
+    with pytest.raises(ValueError, match="whole-sentence"):
+        synthesize.google_render(select(SOURCE.read_text(), sentence_count=2), "en-US-Neural2-F", 0.72, voices, mode="erasmian", style="lively")
+    assert len(payloads) == 1
+
+
+def test_invalid_style_configuration_is_rejected():
+    cfg = config()
+    cfg["voices"]["erasmian"].update(voice="en-US-Neural2-F", style="lively")
+    validate(cfg)
+    for value in ["dramatic", ["lively"], True]:
+        cfg["voices"]["erasmian"]["style"] = value
+        with pytest.raises(ValueError, match="style"):
+            validate(cfg)

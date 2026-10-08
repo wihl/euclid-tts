@@ -1,0 +1,239 @@
+{
+  "convention": "bird-handout-and-class-2026-10-08",
+  "authority_order": "Timestamped class remarks override the written handout; handout governs otherwise.",
+  "paths_relative_to": "external course workspace",
+  "sources": [
+    {
+      "id": "handout",
+      "path": "materials/course/greek-resources/GreekAlphabetSequence.pdf",
+      "sha256": "5a3457f3451123c1b97de9ba575bed0b9a9104a273633e0861d20dc3b6d26b0b",
+      "locators": [
+        "pp. 1–2: alphabet",
+        "p. 4: diphthongs and reading hints"
+      ]
+    },
+    {
+      "id": "study_note",
+      "path": "coursework/study/class-03-greek-notes.md",
+      "sha256": "1ad3c33a992e2d99cfdbabd705469d71a34e0290a5f3a3d630e1b60d4260e1c5",
+      "locators": [
+        "Class pronunciation bullet"
+      ]
+    },
+    {
+      "id": "class_03",
+      "path": "coursework/lectures/2026-class-03/lecture-note.md",
+      "sha256": "dcbc8ccaeaee632fe247b42706c8c51939b6748552dc2d68f86cd8a9ce32d153",
+      "locators": [
+        "01:03:00–01:03:09: silent subscript in τῷ",
+        "01:05:36–01:05:54: δέ and δή alike; quality unspecified",
+        "01:18:52–01:19:25: τῷ as tow",
+        "01:30:12: delta correction",
+        "01:32:20: h retained in ὅπερ"
+      ]
+    },
+    {
+      "id": "class_02",
+      "path": "coursework/lectures/2026-class-02/lecture-note.md",
+      "sha256": "16ea885eb422da5b22db77a6ff879938bebd00ab9779655c9bff9cde9536ded7",
+      "locators": [
+        "00:45:00–00:45:23: ου as oo"
+      ]
+    }
+  ],
+  "course_files_modified": false,
+  "interpretation_choices": {
+    "omicron": "Unmerged American off /ɔ/ selected; handout does not specify English dialect. This is not proof of the professor’s vowel realization.",
+    "delta_epsilon_eta": "δέ and δή both /dɛ/: equality documented, exact shared quality not transcribed.",
+    "alpha_upsilon": "αυ /aʊ/ retained as an unresolved selection; not listed in the handout diphthong line.",
+    "iota_subscript": "Silent in all reviewed inflections, extending the specifically documented τῷ rule."
+  },
+  "google_en_US_substitutions": {
+    "y": {
+      "engine_ipa": "uː",
+      "reason": "en-US lacks /y/; /uː/ preserves high rounded quality but loses frontness"
+    },
+    "x": {
+      "engine_ipa": "k",
+      "reason": "en-US lacks /x/; /k/ preserves velar place but loses frication"
+    }
+  },
+  "google_vowel_encoding": "ɑ → ɑː; monophthong ɔ → ɔː, keeping ɔɪ intact. Engine lengths do not establish Greek quantity.",
+  "kokoro": "Pinned multilingual vocabulary includes y and x. Tokens submitted unchanged to af_heart; actual English-voice realization needs listening.",
+  "changes": [
+    {
+      "table": "LEXICON",
+      "greek": "πρὸς",
+      "previous_ipa": "pɹɑs",
+      "course_target_ipa": "pɹɔs"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "δοθείσῃ",
+      "previous_ipa": "dɑˈθeɪseɪ",
+      "course_target_ipa": "dɔˈθeɪseɪ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθείᾳ",
+      "previous_ipa": "ɛʊˈθeɪɑ",
+      "course_target_ipa": "juːˈθeɪɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "γωνίᾳ",
+      "previous_ipa": "ɡoʊˈnɪɑ",
+      "course_target_ipa": "ɡoʊˈniːɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθυγράμμῳ",
+      "previous_ipa": "ɛʊθʊˈɡɹɑmoʊ",
+      "course_target_ipa": "juːθyˈɡɹɑmoʊ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ἴσην",
+      "previous_ipa": "ˈɪseɪn",
+      "course_target_ipa": "ˈiːseɪn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "γωνίαν",
+      "previous_ipa": "ɡoʊˈnɪɑn",
+      "course_target_ipa": "ɡoʊˈniːɑn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθύγραμμον",
+      "previous_ipa": "ɛʊˈθʊɡɹɑmɑn",
+      "course_target_ipa": "juːˈθyɡɹɑmɔn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "συστήσασθαι",
+      "previous_ipa": "sʊˈsteɪsɑsθaɪ",
+      "course_target_ipa": "syˈsteɪsɑsθaɪ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "δοθεῖσα",
+      "previous_ipa": "dɑˈθeɪsɑ",
+      "course_target_ipa": "dɔˈθeɪsɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθεῖα",
+      "previous_ipa": "ɛʊˈθeɪɑ",
+      "course_target_ipa": "juːˈθeɪɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "τὸ",
+      "previous_ipa": "tɑ",
+      "course_target_ipa": "tɔ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "σημεῖον",
+      "previous_ipa": "seɪˈmeɪɑn",
+      "course_target_ipa": "seɪˈmeɪɔn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "γωνία",
+      "previous_ipa": "ɡoʊˈnɪɑ",
+      "course_target_ipa": "ɡoʊˈniːɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθύγραμμος",
+      "previous_ipa": "ɛʊˈθʊɡɹɑmɑs",
+      "course_target_ipa": "juːˈθyɡɹɑmɔs"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ὑπὸ",
+      "previous_ipa": "hʊˈpɑ",
+      "course_target_ipa": "hyˈpɔ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "τυχόντα",
+      "previous_ipa": "tʊˈkɑntɑ",
+      "course_target_ipa": "tyˈxɔntɑ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ἐπεζεύχθω",
+      "previous_ipa": "ɛpɛˈzɛʊkθoʊ",
+      "course_target_ipa": "ɛpɛˈzjuːxθoʊ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εὐθειῶν",
+      "previous_ipa": "ɛʊθeɪˈoʊn",
+      "course_target_ipa": "juːθeɪˈoʊn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "εἰσὶν",
+      "previous_ipa": "eɪˈsɪn",
+      "course_target_ipa": "eɪˈsiːn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ἴσαι",
+      "previous_ipa": "ˈɪsaɪ",
+      "course_target_ipa": "ˈiːsaɪ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "τρισὶ",
+      "previous_ipa": "tɹɪˈsɪ",
+      "course_target_ipa": "tɹɪˈsiː"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "τρίγωνον",
+      "previous_ipa": "ˈtɹɪɡoʊnɑn",
+      "course_target_ipa": "ˈtɹiːɡoʊnɔn"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "συνεστάτω",
+      "previous_ipa": "sʊnɛˈstɑtoʊ",
+      "course_target_ipa": "synɛˈstɑtoʊ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "δύο",
+      "previous_ipa": "ˈdʊɑ",
+      "course_target_ipa": "ˈdyɔ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ἴση",
+      "previous_ipa": "ˈɪseɪ",
+      "course_target_ipa": "ˈiːseɪ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "συνέσταται",
+      "previous_ipa": "sʊˈnɛstɑtaɪ",
+      "course_target_ipa": "syˈnɛstɑtaɪ"
+    },
+    {
+      "table": "LEXICON",
+      "greek": "ὅπερ",
+      "previous_ipa": "ˈhɑpɛɹ",
+      "course_target_ipa": "ˈhɔpɛɹ"
+    },
+    {
+      "table": "ERASMIAN_LETTERS",
+      "greek": "Ε",
+      "previous_ipa": "ˈɛpsɪlɑn",
+      "course_target_ipa": "ˈɛpsɪlɔn"
+    }
+  ]
+}

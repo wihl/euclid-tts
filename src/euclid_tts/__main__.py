@@ -11,7 +11,7 @@ from pathlib import Path
 import yaml
 
 from . import audio
-from .pronunciation import erasmian, ipa, modern
+from .pronunciation import erasmian, ipa, modern, pronunciation_record
 from .prosody import DEFAULT_PAUSES, pause_settings
 from .synthesize import BackendError, Kokoro, google_render, google_voices, kokoro_render, melina_render
 from .text import ROOT, SOURCE, TEST_PHRASE, select
@@ -60,6 +60,11 @@ def validate(cfg: dict) -> dict:
             raise ValueError("modern_female.input must be normalized or respelled")
         if type(v.get("level_speech", False)) is not bool:
             raise ValueError(f"{name}.level_speech must be true or false")
+        if v.get("style") is not None:
+            if name != "erasmian" or v["backend"] != "google_cloud" or v["voice"] != "en-US-Neural2-F":
+                raise ValueError("Reviewed expressive styles require Erasmian Google en-US-Neural2-F")
+            if not isinstance(v["style"], str) or v["style"] not in {"apologetic", "calm", "empathetic", "firm", "lively"}:
+                raise ValueError("Invalid Google expressive style")
     formats = cfg["output"].get("formats")
     if not isinstance(formats, list) or not formats or len(set(formats)) != len(formats) or set(formats)-{"wav", "mp3"}:
         raise ValueError("output.formats must contain wav and/or mp3 without duplicates")
@@ -100,8 +105,8 @@ def build(cfg, out, voice=None, sentence_count=None):
             continue
         start = time.perf_counter()
         if name == "erasmian" and v["backend"] == "google_cloud":
-            data, meta = google_render(selected, v["voice"], cfg["speech"]["rate"], mode="erasmian", pauses=pauses)
-            meta["ipa"] = ipa(erasmian(selected))
+            data, meta = google_render(selected, v["voice"], cfg["speech"]["rate"], mode="erasmian", pauses=pauses, style=v.get("style"))
+            meta.update(pronunciation_record(selected, "google_cloud"))
         elif name == "erasmian":
             load_start = time.perf_counter()
             model = Kokoro(v["voice"])
@@ -110,7 +115,7 @@ def build(cfg, out, voice=None, sentence_count=None):
             data, meta = kokoro_render(model, selected, cfg["speech"]["rate"], pauses)
             meta["load_seconds"] = load_seconds
             meta["inference_seconds"] = time.perf_counter()-inference_start
-            meta["ipa"] = ipa(erasmian(selected))
+            meta.update(pronunciation_record(selected, "kokoro"))
         else:
             data, meta = render_modern(selected, v, cfg["speech"]["rate"], ROOT/"work/modern-raw.wav", pauses)
         if v.get("level_speech", False):

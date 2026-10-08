@@ -1,0 +1,27 @@
+passage:
+  proposition: I.23
+  selection: first_sentences
+  sentence_count: 1
+speech:
+  rate: 0.72
+  pauses:
+    phrase: 0.65
+    comma: 0.85
+    section: 1.15
+    sentence: 1.3
+voices:
+  erasmian:
+    enabled: true
+    backend: google_cloud
+    voice: en-US-Neural2-F
+    level_speech: true
+  modern_female:
+    enabled: false
+    backend: google_cloud
+    voice: el-GR-Wavenet-B
+    input: normalized
+output:
+  directory: ../output/round-5/neural2-neutral
+  formats:
+  - wav
+  - mp3

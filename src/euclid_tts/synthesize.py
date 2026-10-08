@@ -7,14 +7,14 @@ import os
 import subprocess
 import wave
 from pathlib import Path
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr
 
 import numpy as np
 
 from . import audio
-from .pronunciation import erasmian, erasmian_ssml_words, modern
+from .pronunciation import engine_phonemes, erasmian, erasmian_ssml_words, modern
 from .prosody import phrase_plan
-from .text import ROOT
+from .text import ROOT, sentences
 
 MODEL_REPO = "onnx-community/Kokoro-82M-v1.0-ONNX"
 MODEL_REVISION = "1939ad2a8e416c0acfeecc08a694d14ef25f2231"
@@ -78,7 +78,7 @@ class Kokoro:
         self.artifacts = {"model_sha256": hashlib.sha256(model_path.read_bytes()).hexdigest(), "voice_sha256": hashlib.sha256(voice_path.read_bytes()).hexdigest(), "model_bytes": model_path.stat().st_size, "voice_bytes": voice_path.stat().st_size, "revision": MODEL_REVISION, "vocab_revision": VOCAB_REVISION, "provider": self.session.get_providers()}
 
     def synthesize(self, text: str, rate: float) -> tuple[np.ndarray, dict]:
-        phonemes = erasmian(text)
+        phonemes = engine_phonemes(erasmian(text), "kokoro")
         unknown = sorted(set(phonemes)-self.vocab.keys())
         if unknown:
             raise ValueError(f"Unrepresentable Kokoro phonemes: {unknown}")
@@ -124,7 +124,7 @@ def google_ssml_batches(plan: list[dict], mode: str, respelled: bool = False) ->
     return batches
 
 
-def google_render(text: str, voice: str, rate: float, voices: list[dict] | None = None, *, mode: str = "modern_female", pauses: dict | None = None, respelled: bool = False) -> tuple[np.ndarray, dict]:
+def google_render(text: str, voice: str, rate: float, voices: list[dict] | None = None, *, mode: str = "modern_female", pauses: dict | None = None, respelled: bool = False, style: str | None = None) -> tuple[np.ndarray, dict]:
     language_code = "en-US" if mode == "erasmian" else "el-GR"
     voices = google_voices(language_code) if voices is None else voices
     selected = next((v for v in voices if v["name"] == voice), None)
@@ -132,6 +132,16 @@ def google_render(text: str, voice: str, rate: float, voices: list[dict] | None 
         raise BackendError(f"Google has not confirmed {voice} as an available {language_code} female voice")
     plan = phrase_plan(text, pauses)
     batches = google_ssml_batches(plan, mode, respelled)
+    if style is not None:
+        if voice != "en-US-Neural2-F" or not isinstance(style, str) or style not in {"apologetic", "calm", "empathetic", "firm", "lively"}:
+            raise ValueError("This prototype uses documented expressive styles only with en-US-Neural2-F")
+        if len(batches) != len(sentences(text)):
+            raise ValueError("Style tags require whole-sentence batches; use one sentence")
+        for batch in batches:
+            body = batch["ssml"].removeprefix("<speak>").removesuffix("</speak>")
+            batch["ssml"] = f'<speak><google:style name={quoteattr(style)}>{body}</google:style></speak>'
+            if len(batch["ssml"].encode("utf-8")) > 5000:
+                raise ValueError("Styled SSML request exceeds Google's 5,000-byte limit")
     session = google_session()
     clips = []
     for batch in batches:
@@ -141,7 +151,7 @@ def google_render(text: str, voice: str, rate: float, voices: list[dict] | None 
         batch["request_bytes"] = len(batch["ssml"].encode("utf-8"))
         if batch["pause_after_seconds"]:
             clips.append(np.zeros(round(audio.SAMPLE_RATE*batch["pause_after_seconds"]), dtype=np.float32))
-    return np.concatenate(clips), {"backend": "google_cloud", "voice": voice, "gender": selected["ssmlGender"], "locale": language_code, "input_style": "ipa_ssml" if mode == "erasmian" else "respelled_ssml" if respelled else "normalized_ssml", "normalized_text": modern(text, respelled) if mode != "erasmian" else None, "characters": sum(len(b["ssml"]) for b in batches), "phrase_plan": plan, "requests": batches}
+    return np.concatenate(clips), {"backend": "google_cloud", "voice": voice, "gender": selected["ssmlGender"], "locale": language_code, "expressive_style": style, "input_style": "ipa_ssml" if mode == "erasmian" else "respelled_ssml" if respelled else "normalized_ssml", "normalized_text": modern(text, respelled) if mode != "erasmian" else None, "characters": sum(len(b["ssml"]) for b in batches), "phrase_plan": plan, "requests": batches}
 
 
 def google_request(session, payload: dict) -> np.ndarray:

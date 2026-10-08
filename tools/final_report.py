@@ -19,8 +19,13 @@ LATEST_REVIEW = (
     "found the default Modern WaveNet reading accurate. The Erasmian reading had some overly quiet "
     "word endings. The user requested one sentence to shorten the presentation clips. Current defaults "
     "read only the opening enunciation, retaining rate 0.72 and its three phrase pauses. Erasmian adds "
-    "gentle volume leveling. The shortened Modern WAV delivered for this review was an exact PCM excerpt "
-    "of the approved performance."
+    "gentle volume leveling. The user then confirmed that the Erasmian drop-off was gone, but still found "
+    "its overall tone synthesized compared with Modern Greek. The user rejected Chirp Leda as worse "
+    "and found Neural2 lively slurred and poorly enunciated. The course-handout audit then corrected "
+    "Erasmian ευ, υ, accented ι, χ and the selected omicron vowel, including the epsilon label. "
+    "The fresh WaveNet default uses the reconciled targets and explicit English-engine substitutes. "
+    "Subsequent Neural2 neutral and firm trials use that corrected input; human review is pending. "
+    "The shortened Modern WAV delivered for this review was an exact PCM excerpt of the approved performance."
 )
 
 
@@ -86,18 +91,23 @@ def main():
         "`δοθείσῃ`, `εὐθείᾳ`, `συστήσασθαι`. These are diagnostic pronunciation inputs, "
         "not corrected orthography or translation; stress, inflections and word order remain. "
         "The normalized WaveNet reading remains the default so the spelling intervention can be compared separately.", "",
-        "Both Erasmian engines use the same finite targets: stress, rough /h/, silent iota subscript, "
+        "The historical round-2 Erasmian engines used the same pre-audit finite targets: stress, rough /h/, silent iota subscript, "
         "/b ɡ d/, eta/ei /eɪ/, omega /oʊ/, and documented Anglophone diphthongs. Google's English IPA "
         "tags wrap each word and each expanded letter name separately. Its documented /ɑː/ encodes "
         "Kokoro's /ɑ/ without asserting Greek vowel quantity. Actual phonetic realization remains unverified.", "",
-        "Erasmian limitations remain: English rho, alpha/omicron merger, incomplete quantity/gemination, "
-        "and two-phoneme /ɛʊ/ for ευ. English engines can impose vowel reduction and English rhythm. "
-        "Course notes support rough /h/, silent subscript in τῷ, and equality of δέ/δή; other choices "
-        "are selected prototype conventions. No reconstructed pitch accent or speaker imitation is used.", "",
+        "Those historical targets contained the defects corrected by the course audit. The current "
+        "default uses ευ /juː/, accented ι /iː/, υ target /y/ with Google substitute /uː/, and χ "
+        "target /x/ with Google substitute /k/. Omicron now selects unmerged American off /ɔ/. "
+        "English /ɹ/ already agrees with the handout's run. Source pages, timestamps, remaining "
+        "interpretation choices and engine limits are in the pronunciation table in `../README.md` "
+        "and `../input/pronunciation-source.json`. Historical files remain unchanged; rerunning a "
+        "recipe uses the current lexicon. No reconstructed pitch accent or speaker imitation is used.", "",
         "Modern pronunciation retains Ancient grammar and wording, so it still sounds linguistically archaic. "
         "The earlier report of mixed pronunciation was superseded by the native listener's approval of "
         "the default WaveNet reading. Other Modern variants have no reported listening verdict. "
-        "The Erasmian volume adjustment still needs a listening check. No ASR completeness verdict is claimed.", "",
+        "The user confirmed that Erasmian leveling fixed the word-ending drop-off, but still finds its "
+        "tone synthesized. Chirp Leda was rejected and Neural2 lively was slurred. The corrected "
+        "default and new neutral/firm trials await listening. No ASR completeness verdict is claimed.", "",
         "## Short controls", "",
         "Five first-sentence trials preceded the full renders, using rate **0.82** and pauses "
         "**0.45/0.65/0.90/1.10 seconds**. Exact recipes are in `../experiments/short/`; "
@@ -137,7 +147,7 @@ def main():
     write("model-comparison.md", lines)
     comparison = {"feedback": FEEDBACK, "candidates": candidates, "short_control_candidates": short,
                   "latest_review": LATEST_REVIEW,
-                  "human_review_of_revisions": {"modern_wavenet": "accurate, native speaker as reported by user", "erasmian": "much better, quiet endings reported; new leveling awaits review"},
+                  "human_review_of_revisions": {"modern_wavenet": "accurate, native speaker as reported by user", "erasmian_pre_audit": "drop-off resolved according to user; tone still sounds synthesized", "chirp_leda": "rejected as worse", "neural2_lively": "somewhat better, but slurred and poorly enunciated", "erasmian_corrected": "pending"},
                   "source_sha256": source["input_sha256"]}
     (OUT/"model-comparison.json").write_text(json.dumps(comparison, ensure_ascii=False, indent=2)+"\n")
     final = ["# One-sentence presentation clips", "", LATEST_REVIEW, "", "## Current defaults", "",
@@ -155,6 +165,21 @@ def main():
         "## Exact selected Greek", "", e["selected_greek"], "",
         f"{source['edition']}; {source['locator']}. {source['independent_pdf_column_comparison']}", "",
         f"Source SHA-256: `{source['input_sha256']}`. Source bytes are unchanged.", "",
+        "## Course convention audit", "",
+        "The alphabet was checked against GreekAlphabetSequence.pdf pp. 1–2 and the diphthongs "
+        "against p. 4. Class-3 remarks at 01:03:00–01:03:09, 01:05:36–01:05:54, 01:30:12 and "
+        "01:32:20 take precedence; class 2 at 00:45:00–00:45:23 confirms ου as oo. "
+        "See the row-by-row table in `../README.md` and source hashes / 29 changed entries in "
+        "`../input/pronunciation-source.json`. Course files were only read.", "",
+        "The corrected Google input uses ευ /juː/, stressed ι /iː/ and standalone υ substitute "
+        "/uː/ for target /y/. χ target /x/ becomes /k/ in this English engine; it occurs only in "
+        "the longer source, not the selected sentence. Selected omicron /ɔ/ is distinct from α /ɑ/; "
+        "the handout does not specify the English dialect. δέ/δή remain equal at selected /dɛ/ "
+        "because the notes establish equality but do not transcribe vowel quality.", "",
+        f"Convention: `{e['pronunciation_convention']}`. Target and submitted IPA plus affected-word "
+        "substitutions are recorded in `euclid-I23-erasmian.json`. Exact realization, stress, hiatus "
+        "and connected-speech clarity still need a human ear. Volume leveling is retained; earlier "
+        "word-ending measurements apply only to the archived pre-correction waveform.", "",
         "See [comparisons and commands](model-comparison.md), [default QC](qc-report.md), and "
         "`all-audio-integrity.json` for measurements. Feedback is in `../EXPERIMENTS.md`. Google setup works."]
     check_path = OUT/"erasmian-level-check.json"
@@ -174,7 +199,54 @@ def main():
         final += ["", "Erasmian uses gentle 2:1 compression at -24 dBFS, +6 dB makeup and a "
             "latency-compensated peak limiter. No frame count, pitch, synthesis speed or pause position "
             "is changed by that processing. WAV and MP3 decode without clipping. Detailed word windows "
-            "are saved in `erasmian-level-check.json`. The adjusted Erasmian output awaits listening."]
+            "are saved in `erasmian-level-check.json`. The user confirmed that the adjusted Erasmian "
+            "no longer tails off, though its overall tone remains less natural than Modern Greek."]
+    naturalness = []
+    for candidate_name in ["neural2-lively", "chirp-leda"]:
+        folder = OUT/"round-4"/candidate_name
+        if folder.exists():
+            naturalness.append(record(candidate_name, folder))
+    if naturalness:
+        natural_lines = ["# Erasmian naturalness trials", "",
+            "The user confirmed that leveling resolved the drop-off, but finds the WaveNet Erasmian "
+            "tone synthesized compared with Modern Greek. These alternatives test voice/model "
+            "prosody with the same one-sentence passage, phoneme targets, rate 0.72, three 0.65-second "
+            "phrase pauses and gentle leveling. Generated audio is ready for comparison; no listening "
+            "winner or new pronunciation-accuracy verdict is claimed.", "",
+            "| Candidate | Voice | Style | Duration | Build/export | MP3 |",
+            "| --- | --- | --- | ---: | ---: | --- |",
+            f"| Current reference | {e['voice']} | Default | {e['audio'][0]['duration_seconds']:.3f}s | — | [listen](euclid-I23-erasmian.mp3) |"]
+        for c in naturalness:
+            assert c["selected_greek"] == e["selected_greek"]
+            assert c["ipa"] == e["ipa"]
+            assert c["leveling"]["filter"] == e["leveling"]["filter"]
+            natural_lines.append(f"| {c['candidate']} | {c['voice']} | {c.get('expressive_style') or 'Default'} | {c['audio'][0]['duration_seconds']:.3f}s | {c['elapsed_seconds']:.2f}s | [listen](round-4/{c['candidate']}/euclid-I23-erasmian.mp3) |")
+        natural_lines += ["", "The live inventory verified both voices as FEMALE/en-US; services accepted "
+            "the word-level IPA and pause markup. Neural2 wraps its complete sentence in Google's "
+            "documented `google:style` extension. That style and Chirp's SSML support are currently "
+            "preview features. All four new WAV/MP3 files decode without clipping. Request acceptance "
+            "does not establish the spoken phoneme realization.", "",
+            "Neural2 is the first comparison to audition: it introduces an expressive style while "
+            "staying near the reference duration. Chirp tests a different model and has longer measured "
+            "pauses despite the same requested settings. Its waveform remains active at the file end, "
+            "so check the final συστήσασθαι for a complete, natural ending during playback.", "",
+            "```bash",
+            "uv run python -m euclid_tts --config experiments/round-4-erasmian-neural2-lively.yaml build",
+            "uv run python -m euclid_tts --config experiments/round-4-erasmian-chirp-leda.yaml build",
+            "```", "",
+            "Listen for natural connected speech, accurate stress and the intended Erasmian /eɪ/ "
+            "rather than Modern /i/, /ɛʊ/ rather than /ef/, and consonant /d/ rather than /ð/. "
+            "These English voices still read a manually specified Ancient vocabulary outside their "
+            "ordinary English context; naturalness can remain limited. An explanation attributing "
+            "the stiffness to that mismatch is an inference, not an established diagnosis.", "",
+            "[Google Neural2 expressive styles](https://docs.cloud.google.com/text-to-speech/docs/ssml#styles), "
+            "[Chirp SSML and voice controls](https://docs.cloud.google.com/text-to-speech/docs/chirp3-hd)."]
+        write("naturalness-comparison.md", natural_lines)
+        (OUT/"naturalness-comparison.json").write_text(json.dumps({"candidates": naturalness, "human_review": "pending"}, ensure_ascii=False, indent=2)+"\n")
+        final += ["", "## Further naturalness trials", "",
+            "Separate [Neural2 lively and Chirp Leda samples](naturalness-comparison.md) test more "
+            "expressive delivery. The current defaults remain the user-reviewed WaveNet pair; no "
+            "unreviewed alternative was promoted."]
     write("final-report.md", final)
     print(f"Saved five full comparisons and five short controls; {len(all_audio)} audio files decode without clipping")
 

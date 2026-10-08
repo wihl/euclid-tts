@@ -1,4 +1,4 @@
-"""A manually reviewed I.23 lexicon, not a general Ancient Greek G2P."""
+"""Finite I.23 course targets; engine approximations are applied separately."""
 import re
 import unicodedata as ud
 from xml.sax.saxutils import escape, quoteattr
@@ -6,34 +6,41 @@ from xml.sax.saxutils import escape, quoteattr
 from .text import LETTERS, WORD
 
 # Kokoro's IPA-like alphabet uses single-codepoint English diphthong tokens.
-# A=aɪ, I=eɪ, O=oʊ, W=aʊ; ευ is represented with ɛ + ʊ.
+# A=aɪ, I=eɪ, O=oʊ, W=aʊ. The other symbols are course-target IPA.
 # One primary stress per accented polysyllabic word; no historical pitch accent.
+# Evidence: input/pronunciation-source.json and README's reconciliation table.
+# Omicron selects unmerged American "off" /ɔ/; the handout gives no dialect.
 LEXICON = {
-    "πρὸς": "pɹɑs", "τῇ": "tI", "δοθείσῃ": "dɑˈθIsI",
-    "εὐθείᾳ": "ɛʊˈθIɑ", "καὶ": "kA", "τῷ": "tO", "αὐτῇ": "aʊˈtI",
-    "σημείῳ": "sIˈmIO", "γωνίᾳ": "gOˈnɪɑ", "εὐθυγράμμῳ": "ɛʊθʊˈgɹɑmO",
-    "ἴσην": "ˈɪsIn", "γωνίαν": "gOˈnɪɑn", "εὐθύγραμμον": "ɛʊˈθʊgɹɑmɑn",
-    "συστήσασθαι": "sʊˈstIsɑsθA", "ἔστω": "ˈɛstO", "ἡ": "hI",
-    "μὲν": "mɛn", "δοθεῖσα": "dɑˈθIsɑ", "εὐθεῖα": "ɛʊˈθIɑ", "τὸ": "tɑ",
-    "δὲ": "dɛ", "σημεῖον": "sIˈmIɑn", "γωνία": "gOˈnɪɑ",
-    "εὐθύγραμμος": "ɛʊˈθʊgɹɑmɑs", "ὑπὸ": "hʊˈpɑ", "δεῖ": "dI",
+    "πρὸς": "pɹɔs", "τῇ": "tI", "δοθείσῃ": "dɔˈθIsI",
+    "εὐθείᾳ": "juːˈθIɑ", "καὶ": "kA", "τῷ": "tO", "αὐτῇ": "aʊˈtI",
+    "σημείῳ": "sIˈmIO", "γωνίᾳ": "gOˈniːɑ", "εὐθυγράμμῳ": "juːθyˈgɹɑmO",
+    "ἴσην": "ˈiːsIn", "γωνίαν": "gOˈniːɑn", "εὐθύγραμμον": "juːˈθygɹɑmɔn",
+    "συστήσασθαι": "syˈstIsɑsθA", "ἔστω": "ˈɛstO", "ἡ": "hI",
+    "μὲν": "mɛn", "δοθεῖσα": "dɔˈθIsɑ", "εὐθεῖα": "juːˈθIɑ", "τὸ": "tɔ",
+    "δὲ": "dɛ", "σημεῖον": "sIˈmIɔn", "γωνία": "gOˈniːɑ",
+    "εὐθύγραμμος": "juːˈθygɹɑmɔs", "ὑπὸ": "hyˈpɔ", "δεῖ": "dI",
     # The course note explicitly says δέ and δή are alike; exact vowel quality
     # is not transcribed. This prototype selects /ɛ/ for this pair only.
     "δὴ": "dɛ", "εἰλήφθω": "IˈlIfθO", "ἐφ᾿": "ɛf", "ἑκατέρας": "hɛkɑˈtɛɹɑs",
-    "τῶν": "tOn", "τυχόντα": "tʊˈkɑntɑ", "σημεῖα": "sIˈmIɑ", "τὰ": "tɑ",
-    "ἐπεζεύχθω": "ɛpɛˈzɛʊkθO", "ἐκ": "ɛk", "τριῶν": "tɹɪˈOn",
-    "εὐθειῶν": "ɛʊθIˈOn", "αἵ": "hA", "αἱ": "hA", "εἰσιν": "Isɪn",
-    "εἰσὶν": "Iˈsɪn", "ἴσαι": "ˈɪsA", "τρισὶ": "tɹɪˈsɪ", "ταῖς": "tAs",
-    "τρίγωνον": "ˈtɹɪgOnɑn", "συνεστάτω": "sʊnɛˈstɑtO", "ὥστε": "ˈhOstɛ",
+    "τῶν": "tOn", "τυχόντα": "tyˈxɔntɑ", "σημεῖα": "sIˈmIɑ", "τὰ": "tɑ",
+    "ἐπεζεύχθω": "ɛpɛˈzjuːxθO", "ἐκ": "ɛk", "τριῶν": "tɹɪˈOn",
+    "εὐθειῶν": "juːθIˈOn", "αἵ": "hA", "αἱ": "hA", "εἰσιν": "Isɪn",
+    "εἰσὶν": "Iˈsiːn", "ἴσαι": "ˈiːsA", "τρισὶ": "tɹɪˈsiː", "ταῖς": "tAs",
+    "τρίγωνον": "ˈtɹiːgOnɔn", "συνεστάτω": "synɛˈstɑtO", "ὥστε": "ˈhOstɛ",
     "εἶναι": "ˈInA", "τὴν": "tIn", "ἔτι": "ˈɛtɪ", "ἐπεὶ": "ɛˈpI", "οὖν": "uːn",
-    "δύο": "ˈdʊɑ", "ἑκατέρα": "hɛkɑˈtɛɹɑ", "ἑκατέρᾳ": "hɛkɑˈtɛɹɑ",
-    "βάσις": "ˈbɑsɪs", "βάσει": "ˈbɑsI", "ἴση": "ˈɪsI", "ἄρα": "ˈɑɹɑ",
-    "ἐστιν": "ɛstɪn", "συνέσταται": "sʊˈnɛstɑtA", "ὅπερ": "ˈhɑpɛɹ",
+    "δύο": "ˈdyɔ", "ἑκατέρα": "hɛkɑˈtɛɹɑ", "ἑκατέρᾳ": "hɛkɑˈtɛɹɑ",
+    "βάσις": "ˈbɑsɪs", "βάσει": "ˈbɑsI", "ἴση": "ˈiːsI", "ἄρα": "ˈɑɹɑ",
+    "ἐστιν": "ɛstɪn", "συνέσταται": "syˈnɛstɑtA", "ὅπερ": "ˈhɔpɛɹ",
     "ἔδει": "ˈɛdI", "ποιῆσαι": "pɔɪˈIsA",
 }
 ERASMIAN_LETTERS = {
     "Α": "ˈɑlfɑ", "Β": "ˈbItɑ", "Γ": "ˈgɑmɑ", "Δ": "ˈdɛltɑ",
-    "Ε": "ˈɛpsɪlɑn", "Ζ": "ˈzItɑ", "Η": "ˈItɑ",
+    "Ε": "ˈɛpsɪlɔn", "Ζ": "ˈzItɑ", "Η": "ˈItɑ",
+}
+CONVENTION = "bird-handout-and-class-2026-10-08"
+GOOGLE_SUBSTITUTIONS = {
+    "y": {"engine_ipa": "uː", "reason": "en-US lacks /y/; /uː/ preserves high rounded quality but loses frontness"},
+    "x": {"engine_ipa": "k", "reason": "en-US lacks /x/; /k/ preserves velar place but loses frication"},
 }
 MODERN_LETTERS = {"Α": "άλφα", "Β": "βήτα", "Γ": "γάμμα", "Δ": "δέλτα", "Ε": "έψιλον", "Ζ": "ζήτα", "Η": "ήτα"}
 MODERN_MONOSYLLABLES = {"πρός", "τή", "καί", "τώ", "μέν", "τό", "δέ", "δή", "δεί", "τών", "τά", "έκ", "αί", "ταίς", "τήν", "ούν"}
@@ -72,6 +79,39 @@ def ipa(phonemes: str) -> str:
     return phonemes
 
 
+def engine_phonemes(phonemes: str, backend: str) -> str:
+    """Never put an English engine's missing sounds into the course lexicon."""
+    if backend == "kokoro":
+        # The pinned multilingual vocabulary contains /y/ and /x/. Their
+        # realization by this stock American voice still needs a human ear.
+        return phonemes
+    if backend != "google_cloud":
+        raise ValueError(f"Unreviewed Erasmian backend: {backend}")
+    result = ipa(phonemes)
+    for target, substitute in GOOGLE_SUBSTITUTIONS.items():
+        result = result.replace(target, substitute["engine_ipa"])
+    # Documented en-US vowel symbols; quantity is English engine encoding.
+    return re.sub(r"ɔ(?!ɪ)", "ɔː", result.replace("ɑ", "ɑː"))
+
+
+def pronunciation_record(text: str, backend: str) -> dict:
+    target = erasmian(text)
+    substitutions = []
+    if backend == "google_cloud":
+        for sound, details in GOOGLE_SUBSTITUTIONS.items():
+            words = [m.group() for m in re.finditer(WORD, text) if sound in erasmian(m.group())]
+            if words:
+                substitutions.append({"course_ipa": sound, **details, "words": words})
+    return {
+        "pronunciation_convention": CONVENTION,
+        "pronunciation_sources": "input/pronunciation-source.json",
+        "ipa": ipa(target),
+        "engine_ipa": ipa(engine_phonemes(target, backend)),
+        "phoneme_substitutions": substitutions,
+        "engine_vowel_encoding": "ɑ → ɑː; ɔ → ɔː (excluding ɔɪ); no claim of Greek quantity" if backend == "google_cloud" else "Kokoro diphthong tokens A/I/O/W; expanded in engine_ipa",
+    }
+
+
 def modern(text: str, respelled: bool = False) -> str:
     def letters(match: re.Match) -> str:
         try:
@@ -102,12 +142,11 @@ def modern(text: str, respelled: bool = False) -> str:
 def erasmian_ssml_words(text: str) -> str:
     """One IPA tag per word; labels expand into one tag per letter name.
 
-    Google English uses /ɑː/ in its documented alphabet where Kokoro uses
-    /ɑ/. This is an engine encoding adaptation;
-    /ɑː/ does not claim Greek vowel quantity.
+    Missing English /y x/ are substituted explicitly; metadata records both
+    course and engine IPA. Vowel lengths are English encoding, not Greek quantity.
     """
     def tag(label, phonemes):
-        phonemes = ipa(phonemes).replace("ɑ", "ɑː")
+        phonemes = engine_phonemes(phonemes, "google_cloud")
         return f'<phoneme alphabet="ipa" ph={quoteattr(phonemes)}>{escape(label)}</phoneme>'
     def word(match):
         token = match.group()
